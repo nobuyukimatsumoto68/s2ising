@@ -478,23 +478,6 @@ struct RefinedIcosahedron {
     else np = Coords{x+1, y, s}; // within patch
   }
 
-  // // only defined for regular points
-  // void shiftMX( Coords& nP,
-  //               const Coords& n ) const {
-  //   const int x = n[0];
-  //   const int y = n[1];
-  //   const int s = n[2];
-  //   assert(0<=x && x<L);
-  //   assert(0<=y && y<L);
-  //   assert(0<=s && s<NPatches);
-
-  //   if(x==0) { // steps over the patch bdy
-  //     if(s<NPatches/2) np = Coords{L-1, y, s+4}; // southern hemisphere
-  //     else np = Coords{L-1-y, L-1, s-1}; // northern hemisphere
-  //   }
-  //   else np = Coords{x-1, y, s}; // within patch
-  // }
-
   // only defined for regular points
   void shiftPY( Coords& np,
                 const Coords& n ) const {
@@ -515,23 +498,6 @@ struct RefinedIcosahedron {
     else np = Coords{x, y+1, s}; // within patch
   }
 
-
-  // // only defined for regular points
-  // void shiftMY( Coords& np,
-  //               const Coords& n ) const {
-  //   const int x = n[0];
-  //   const int y = n[1];
-  //   const int s = n[2];
-  //   assert(0<=x && x<L);
-  //   assert(0<=y && y<L);
-  //   assert(0<=s && s<NPatches);
-
-  //   if(y==0){ // steps over the patch bdy
-  //     if(s<NPatches/2) np = Coords{L-1, L-1-x, s-1}; // southern hemisphere
-  //     else np = Coords{x, L-1, s-5}; // northern hemisphere
-  //   }
-  //   else np = Coords{x, y-1, s}; // within patch
-  // }
 
   // only defined for regular points
   void shiftPZ( Coords& np,
@@ -555,34 +521,8 @@ struct RefinedIcosahedron {
     }
   }
 
-
-  // // only defined for regular points
-  // void shiftMZ( Coords& np,
-  //               const Coords& n ) const {
-  //   const int x = n[0];
-  //   const int y = n[1];
-  //   const int s = n[2];
-  //   assert(0<=x && x<L);
-  //   assert(0<=y && y<L);
-  //   assert(0<=s && s<NPatches);
-
-  //   if(s<NPatches/2){ // southern hemisphere
-  //     if(x==0) {
-  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
-  //       else np = Coords{L-1, y-1, s+4};
-  //     }
-  //     else if(y==0) np = Coords{L-1, L-x, s-1};
-  //     else np = Coords{x-1, y-1, s};
-  //   }
-  //   else { // northern hemisphere
-  //     if(x==0) {
-  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
-  //       else np = Coords{L-y, L-1, s-1};
-  //     }
-  //     else if(y==0) np = Coords{x-1, L-1, s-5};
-  //     else np = Coords{x-1, y-1, s};
-  //   }
-  // }
+  // @@
+  // basepoints
 
 
 };
@@ -591,31 +531,38 @@ struct RefinedIcosahedron {
 struct RefinedIcosahedronDual {
   const RefinedIcosahedron& simplicial;
   const int L;
+  const Idx Nx;
 
   Vertices vertices;
 
   RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
     : simplicial(simplicial_)
     , L(simplicial.L)
+    , Nx( simplicial.idx(Coords{L-1,L-1,NPatches-1})+1 )
   {
     FillDualPoints();
+    assert(vertices.size()==2*Nx);
   }
 
   Idx NVertices() const { return simplicial.NFaces(); }
   Idx NLinks() const { return simplicial.NLinks(); }
   Idx NFaces() const { return simplicial.NVertices(); }
 
-  Idx idx() const {
-    @@
-  };
+  Idx idx( const FaceCoords& n ) const {
+    const Idx in = simplicial.idx( Coords{n[0], n[1], n[2]} );
+    return 2*in+n[3];
+  }
 
+  // @@
+  // PX, PY, PW, MX, MY, MW
 
   void FillDualPoints(){
     vertices.clear();
 
+    Idx counter=0;
     for(int s=0; s<NPatches; s++){
-      for(int x=0; x<L; x++){
-        for(int y=0; y<L; y++){
+      for(int y=0; y<L; y++){
+        for(int x=0; x<L; x++){
           const Coords n{x,y,s};
           const Idx in = simplicial.idx(n);
 
@@ -634,15 +581,20 @@ struct RefinedIcosahedronDual {
 
           // xz face
           V3 r = project( circumcenter(vn, vnPX, vnPZ) );
+          assert(vertices.size()==idx(FaceCoords{x,y,s,XZ}));
           vertices.push_back( r );
 
           // zy face
           r = project( circumcenter(vn, vnPZ, vnPY ) );
+          assert(vertices.size()==idx(FaceCoords{x,y,s,ZY}));
           vertices.push_back( r );
         }}}
 
     assert( vertices.size()==NVertices() );
   }
+
+  // @@
+  // basepoints
 
 };
 
@@ -726,9 +678,17 @@ struct Orbits {
     }
   }
 
-  void RefreshOrbits(){
-    for(idx in idxInFund)
-      @@@
+  void RefreshOrbits( const std::vector<Idx>& basepts ){
+    for(const Idx in : basepts){
+      const V3 r = vertices[in];
+      const auto orbit = orbits[in];
+
+      for(int ig=0; ig<NIh; ig++){
+        const M3 mg = Ih.rotation(ig, ms, mt);
+        const V3 gr = mg*r;
+        vertices[orbit[ig]] = gr;
+      }
+    }
   }
 
   std::string print() const {
@@ -747,15 +707,17 @@ struct Orbits {
 };
 
 
-struct FundamentalOptimizerForDual{
-  RefinedIcosahedronDual& dual;
-  RefinedIcosahedron& lattice;
+struct FundamentalOptimizer{
+  // RefinedIcosahedronDual& dual;
+  // RefinedIcosahedron& lattice;
 
-  FundamentalOptimizerForDual
-  ( const RefinedIcosahedronDual& dual_ )
-    : dual(dual_)
-    , lattice(dual.simplicial)
-  {}
+  // FundamentalOptimizer
+  // ( const RefinedIcosahedronDual& dual_ )
+  //   : dual(dual_)
+  //   , lattice(dual.simplicial)
+  // {}
+
+  // assign indep params for the fund; categorize class
 
 };
 
@@ -825,7 +787,7 @@ int main(){
 
   {
     // for simplicial
-    Orbits orbits(lattice, lattice.vertices, Ih, rot);
+    Orbits orbits(lattice.vertices, lattice, Ih, rot);
     std::cout << "# orbits (simplicial)" << std::endl;
     std::cout << orbits.print() << std::endl;
   }
@@ -834,7 +796,7 @@ int main(){
   RefinedIcosahedronDual dual(lattice);
   {
     // for dual
-    Orbits orbits(lattice, dual.vertices, Ih, rot);
+    Orbits orbits(dual.vertices, lattice, Ih, rot);
     std::cout << "# orbits (dual)" << std::endl;
     std::cout << orbits.print() << std::endl;
   }
@@ -842,3 +804,68 @@ int main(){
 
   return 0;
 }
+
+
+
+
+  // // only defined for regular points
+  // void shiftMX( Coords& nP,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(x==0) { // steps over the patch bdy
+  //     if(s<NPatches/2) np = Coords{L-1, y, s+4}; // southern hemisphere
+  //     else np = Coords{L-1-y, L-1, s-1}; // northern hemisphere
+  //   }
+  //   else np = Coords{x-1, y, s}; // within patch
+  // }
+
+  // // only defined for regular points
+  // void shiftMY( Coords& np,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(y==0){ // steps over the patch bdy
+  //     if(s<NPatches/2) np = Coords{L-1, L-1-x, s-1}; // southern hemisphere
+  //     else np = Coords{x, L-1, s-5}; // northern hemisphere
+  //   }
+  //   else np = Coords{x, y-1, s}; // within patch
+  // }
+
+  // // only defined for regular points
+  // void shiftMZ( Coords& np,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(s<NPatches/2){ // southern hemisphere
+  //     if(x==0) {
+  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
+  //       else np = Coords{L-1, y-1, s+4};
+  //     }
+  //     else if(y==0) np = Coords{L-1, L-x, s-1};
+  //     else np = Coords{x-1, y-1, s};
+  //   }
+  //   else { // northern hemisphere
+  //     if(x==0) {
+  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
+  //       else np = Coords{L-y, L-1, s-1};
+  //     }
+  //     else if(y==0) np = Coords{x-1, L-1, s-5};
+  //     else np = Coords{x-1, y-1, s};
+  //   }
+  // }
