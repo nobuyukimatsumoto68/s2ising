@@ -24,12 +24,16 @@ using V3 = Eigen::Vector3d;
 using M3 = Eigen::Matrix3d;
 using Complex = std::complex<double>;
 using Coords = std::array<int, 3>; // (x,y,s)
+using FaceCoords = std::array<int, 4>; // (x,y,s,XZ/ZY)
 
 constexpr int NPatches = 10;
 constexpr int PatchIdxS = 10;
 constexpr int PatchIdxN = 11;
 constexpr int PatchIdxVoid = 12;
 constexpr int NIcosVertices = 12;
+
+constexpr int XZ = 0;
+constexpr int ZY = 1;
 
 using PatchEdges = std::array<std::array<int,4>, NPatches>;
 using IcosVertices = std::array<V3, NIcosVertices>;
@@ -601,6 +605,10 @@ struct RefinedIcosahedronDual {
   Idx NLinks() const { return simplicial.NLinks(); }
   Idx NFaces() const { return simplicial.NVertices(); }
 
+  Idx idx() const {
+    @@
+  };
+
 
   void FillDualPoints(){
     vertices.clear();
@@ -642,8 +650,8 @@ struct RefinedIcosahedronDual {
 
 template<class Lattice>
 struct Orbits {
+  Vertices& vertices; // reference
   const Lattice& icosahedral;
-  const Vertices& vertices;
   const FullIcosahedralGroup& Ih;
   const Rotation& rot;
   const Idx nVertices;
@@ -651,14 +659,14 @@ struct Orbits {
   M3 ms, mt;
   std::vector<std::vector<Idx>> orbits;
 
-  Orbits(const Lattice& icosahedral_,
-         const Vertices& vertices_,
+  Orbits(Vertices& vertices_,
+         const Lattice& icosahedral_,
          const FullIcosahedralGroup& Ih_,
          const Rotation& rot_,
          const std::array<int, 2>& link=std::array<int, 2>{0,1},
          const int ipatch=0 )
-    : icosahedral(icosahedral_)
-    , vertices(vertices_)
+    : vertices(vertices_)
+    , icosahedral(icosahedral_)
     , Ih(Ih_)
     , rot(rot_)
     , nVertices(vertices.size())
@@ -718,6 +726,11 @@ struct Orbits {
     }
   }
 
+  void RefreshOrbits(){
+    for(idx in idxInFund)
+      @@@
+  }
+
   std::string print() const {
     std::stringstream ss;
     Idx counter=0;
@@ -734,7 +747,16 @@ struct Orbits {
 };
 
 
-struct FundamentalOptimizer{
+struct FundamentalOptimizerForDual{
+  RefinedIcosahedronDual& dual;
+  RefinedIcosahedron& lattice;
+
+  FundamentalOptimizerForDual
+  ( const RefinedIcosahedronDual& dual_ )
+    : dual(dual_)
+    , lattice(dual.simplicial)
+  {}
+
 };
 
 
