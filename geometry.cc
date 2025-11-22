@@ -23,11 +23,15 @@ using Idx=std::size_t;
 using V3 = Eigen::Vector3d;
 using M3 = Eigen::Matrix3d;
 using Complex = std::complex<double>;
+using Coords = std::array<int, 3>; // (x,y,s)
 
 constexpr int NPatches = 10;
-constexpr Idx NIcosVertices = 12;
+constexpr int PatchIdxS = 10;
+constexpr int PatchIdxN = 11;
+constexpr int PatchIdxVoid = 12;
+constexpr int NIcosVertices = 12;
 
-using PatchEdges = std::array<std::array<Idx,4>, NPatches>;
+using PatchEdges = std::array<std::array<int,4>, NPatches>;
 using IcosVertices = std::array<V3, NIcosVertices>;
 using Vertices = std::vector<V3>;
 
@@ -314,14 +318,14 @@ struct RefinedIcosahedron {
   const double c3 = 1.0/std::sqrt(5.);
   const double s3 = 2.0/std::sqrt(5.);
 
-  const Idx L;
+  const int L;
   IcosVertices icos;
   PatchEdges patches;
   Vertices vertices;
 
   // -----------------------------
 
-  RefinedIcosahedron( const Idx L_ )
+  RefinedIcosahedron( const int L_ )
     : L(L_)
   {
     set_IcosVertices();
@@ -346,20 +350,22 @@ struct RefinedIcosahedron {
     return ss.str();
   }
 
+  // Idx
   // first 10L^2 is for the regular points
-  Idx idx( const int s, const int xl0, const int xl1, const int L ) const {
-    assert( xl0 < L );
-    assert( xl1 < L );
-    return s*L*L + xl1*L + xl0;
-  }
+  // for irregular points
+  Idx idxS() const { return 10*L*L; }
+  Idx idxN() const { return 10*L*L + 1; }
 
-  Idx idxS( const int L ) const {
-    return 10*L*L;
+  Idx idx( const int xl0, const int xl1, const int s ) const {
+    if(s==PatchIdxS) return idxS();
+    else if(s==PatchIdxN) return idxN();
+    else{
+      assert( xl0 < L );
+      assert( xl1 < L );
+      return s*L*L + xl1*L + xl0;
+    }
   }
-
-  Idx idxN( const int L ) const {
-    return 10*L*L + 1;
-  }
+  Idx idx( const Coords& n ) const { return idx(n[0], n[1], n[2]); }
 
   // -----------------------------
 
@@ -382,17 +388,17 @@ struct RefinedIcosahedron {
   }
 
   void set_PatchEdges(){
-    patches[0] = std::array<Idx,4>{1, 0, 6, 2};
-    patches[1] = std::array<Idx,4>{2, 0, 7, 3};
-    patches[2] = std::array<Idx,4>{3, 0, 8, 4};
-    patches[3] = std::array<Idx,4>{4, 0, 9, 5};
-    patches[4] = std::array<Idx,4>{5, 0, 10,1};
+    patches[0] = std::array<int,4>{1, 0, 6, 2};
+    patches[1] = std::array<int,4>{2, 0, 7, 3};
+    patches[2] = std::array<int,4>{3, 0, 8, 4};
+    patches[3] = std::array<int,4>{4, 0, 9, 5};
+    patches[4] = std::array<int,4>{5, 0, 10,1};
 
-    patches[5] = std::array<Idx,4>{6, 2, 11, 7};
-    patches[6] = std::array<Idx,4>{7, 3, 11, 8};
-    patches[7] = std::array<Idx,4>{8, 4, 11, 9};
-    patches[8] = std::array<Idx,4>{9, 5, 11, 10};
-    patches[9] = std::array<Idx,4>{10,1, 11, 6};
+    patches[5] = std::array<int,4>{6, 2, 11, 7};
+    patches[6] = std::array<int,4>{7, 3, 11, 8};
+    patches[7] = std::array<int,4>{8, 4, 11, 9};
+    patches[8] = std::array<int,4>{9, 5, 11, 10};
+    patches[9] = std::array<int,4>{10,1, 11, 6};
   }
 
   // -----------------------------
@@ -407,6 +413,7 @@ struct RefinedIcosahedron {
       const V3 pC = icos[patches[s][2]];
       const V3 pD = icos[patches[s][3]];
 
+      // xz face
       //      pD
       //      /|
       //     / |
@@ -416,14 +423,15 @@ struct RefinedIcosahedron {
       // pA----pB
       const V3 vAB = pB-pA;
       const V3 vBD = pD-pB;
-      for(Idx i=0; i<L; i++){
+      for(int i=0; i<L; i++){
         const double ri = 1.0*i/L;
-        for(Idx j=0; j<=i; j++){
+        for(int j=0; j<=i; j++){
           const double rj = 1.0*j/L;
           const V3 r = pA + ri*vAB + rj*vBD;
-          vertices[idx(s,i,j,L)] = project( r );
+          vertices[idx(i,j,s)] = project( r );
         }}
 
+      // yz face
       // pC----pD
       // |     /
       // |    /
@@ -433,57 +441,197 @@ struct RefinedIcosahedron {
       // pA
       const V3 vCD = pD-pC;
       const V3 vAC = pC-pA;
-      for(Idx j=0; j<L; j++){
+      for(int j=0; j<L; j++){
         const double rj = 1.0*j/L;
-        for(Idx i=0; i<j; i++){
+        for(int i=0; i<j; i++){
           const double ri = 1.0*i/L;
           const V3 r = pA + ri*vCD + rj*vAC;
-          vertices[idx(s,i,j,L)] = project( r );
+          vertices[idx(i,j,s)] = project( r );
         }}
     }
 
-    vertices[idxS(L)] = icos[0];
-    vertices[idxN(L)] = icos[NIcosVertices-1];
+    vertices[idxS()] = icos[0];
+    vertices[idxN()] = icos[NIcosVertices-1];
   }
+
+  // only defined for regular points
+  void shiftPX( Coords& np,
+                const Coords& n ) const {
+    const int x = n[0];
+    const int y = n[1];
+    const int s = n[2];
+    assert(0<=x && x<L);
+    assert(0<=y && y<L);
+    assert(0<=s && s<NPatches);
+
+    if(x==L-1){ // steps over the patch bdy
+      if(s<NPatches/2){ // southern hemisphere
+        if(y==0) np = Coords{-1, -1, PatchIdxS};
+        else np = Coords{y, 0, (s+1)%(NPatches/2)};
+      }
+      else np = Coords{0, y, (s-4)%(NPatches/2)}; // northern hemisphere
+    }
+    else np = Coords{x+1, y, s}; // within patch
+  }
+
+  // // only defined for regular points
+  // void shiftMX( Coords& nP,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(x==0) { // steps over the patch bdy
+  //     if(s<NPatches/2) np = Coords{L-1, y, s+4}; // southern hemisphere
+  //     else np = Coords{L-1-y, L-1, s-1}; // northern hemisphere
+  //   }
+  //   else np = Coords{x-1, y, s}; // within patch
+  // }
+
+  // only defined for regular points
+  void shiftPY( Coords& np,
+                const Coords& n ) const {
+    const int x = n[0];
+    const int y = n[1];
+    const int s = n[2];
+    assert(0<=x && x<L);
+    assert(0<=y && y<L);
+    assert(0<=s && s<NPatches);
+
+    if(y==L-1) { // steps over the patch bdy
+      if(s<NPatches/2) np = Coords{x, 0, s+5}; // southern hemisphere
+      else { // northern hemisphere
+        if(x==0) np = Coords{-1, -1, PatchIdxN};
+        else np = Coords{0, L-x, (s+1)%(NPatches/2)+NPatches/2};
+      }
+    }
+    else np = Coords{x, y+1, s}; // within patch
+  }
+
+
+  // // only defined for regular points
+  // void shiftMY( Coords& np,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(y==0){ // steps over the patch bdy
+  //     if(s<NPatches/2) np = Coords{L-1, L-1-x, s-1}; // southern hemisphere
+  //     else np = Coords{x, L-1, s-5}; // northern hemisphere
+  //   }
+  //   else np = Coords{x, y-1, s}; // within patch
+  // }
+
+  // only defined for regular points
+  void shiftPZ( Coords& np,
+                const Coords& n ) const {
+    const int x = n[0];
+    const int y = n[1];
+    const int s = n[2];
+    assert(0<=x && x<L);
+    assert(0<=y && y<L);
+    assert(0<=s && s<NPatches);
+
+    if(s<NPatches/2){ // southern hemisphere
+      if(x==L-1) np = Coords{L-1-y, 0, (s+1)%(NPatches/2)};
+      else if(y==L-1) np = Coords{x+1, 0, s+5};
+      else np = Coords{x+1, y+1, s};
+    }
+    else { // northern hemisphere
+      if(y==L-1) np = Coords{0, L-1-x, (s+1)%(NPatches/2)+NPatches/2};
+      else if(x==L-1) np = Coords{0, y+1, (s-4)%(NPatches/2)};
+      else np = Coords{x+1, y+1, s};
+    }
+  }
+
+
+  // // only defined for regular points
+  // void shiftMZ( Coords& np,
+  //               const Coords& n ) const {
+  //   const int x = n[0];
+  //   const int y = n[1];
+  //   const int s = n[2];
+  //   assert(0<=x && x<L);
+  //   assert(0<=y && y<L);
+  //   assert(0<=s && s<NPatches);
+
+  //   if(s<NPatches/2){ // southern hemisphere
+  //     if(x==0) {
+  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
+  //       else np = Coords{L-1, y-1, s+4};
+  //     }
+  //     else if(y==0) np = Coords{L-1, L-x, s-1};
+  //     else np = Coords{x-1, y-1, s};
+  //   }
+  //   else { // northern hemisphere
+  //     if(x==0) {
+  //       if(y==0) np = Coords{-1, -1, PatchIdxVoid};
+  //       else np = Coords{L-y, L-1, s-1};
+  //     }
+  //     else if(y==0) np = Coords{x-1, L-1, s-5};
+  //     else np = Coords{x-1, y-1, s};
+  //   }
+  // }
+
 
 };
 
 
 struct RefinedIcosahedronDual {
-  const RefinedIcosahedron& lattice;
+  const RefinedIcosahedron& simplicial;
+  const int L;
 
   Vertices vertices;
 
-  RefinedIcosahedronDual(const RefinedIcosahedron& lattice_)
-    : lattice(lattice_)
+  RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
+    : simplicial(simplicial_)
+    , L(simplicial.L)
   {
     FillDualPoints();
   }
 
-  Idx NVertices() const { return lattice.NFaces(); }
-  // Idx NLinks() const { return 30*L*L; }
-  // Idx NFaces() const { return 20*L*L; }
+  Idx NVertices() const { return simplicial.NFaces(); }
+  Idx NLinks() const { return simplicial.NLinks(); }
+  Idx NFaces() const { return simplicial.NVertices(); }
 
 
   void FillDualPoints(){
     vertices.clear();
 
     for(int s=0; s<NPatches; s++){
-      // interior
-      for(Idx i=0; i<L-1; i++){
-        for(Idx j=0; j<L-1; j++){
-          V3 r0 = vertices[idx(s,i,j,L)];
-          V3 r1; = vertices[idx(s,i,j,L)];
-          V3 r2; = vertices[idx(s,i,j,L)];
+      for(int x=0; x<L; x++){
+        for(int y=0; y<L; y++){
+          const Coords n{x,y,s};
+          const Idx in = simplicial.idx(n);
 
-          V3 r = project( circumcenter(r0, r1, r2) );
+          Coords nPX, nPY, nPZ;
+          simplicial.shiftPX( nPX, n );
+          simplicial.shiftPY( nPY, n );
+          simplicial.shiftPZ( nPZ, n );
+          const Idx inPX = simplicial.idx(nPX);
+          const Idx inPY = simplicial.idx(nPY);
+          const Idx inPZ = simplicial.idx(nPZ);
+
+          const V3 vn = simplicial.vertices[in];
+          const V3 vnPX = simplicial.vertices[inPX];
+          const V3 vnPY = simplicial.vertices[inPY];
+          const V3 vnPZ = simplicial.vertices[inPZ];
+
+          // xz face
+          V3 r = project( circumcenter(vn, vnPX, vnPZ) );
           vertices.push_back( r );
-        }
-        // j=L-1
-        vertices[idx(s,i,j,L)];
-      }
-      // i=L-1
-    }
+
+          // zy face
+          r = project( circumcenter(vn, vnPZ, vnPY ) );
+          vertices.push_back( r );
+        }}}
 
     assert( vertices.size()==NVertices() );
   }
@@ -494,26 +642,31 @@ struct RefinedIcosahedronDual {
 
 template<class Lattice>
 struct Orbits {
-  const Lattice& lattice;
+  const Lattice& icosahedral;
+  const Vertices& vertices;
   const FullIcosahedralGroup& Ih;
   const Rotation& rot;
+  const Idx nVertices;
 
   M3 ms, mt;
   std::vector<std::vector<Idx>> orbits;
 
-  Orbits(const Lattice& lattice_,
+  Orbits(const Lattice& icosahedral_,
+         const Vertices& vertices_,
          const FullIcosahedralGroup& Ih_,
          const Rotation& rot_,
          const std::array<int, 2>& link=std::array<int, 2>{0,1},
          const int ipatch=0 )
-    : lattice(lattice_)
+    : icosahedral(icosahedral_)
+    , vertices(vertices_)
     , Ih(Ih_)
     , rot(rot_)
+    , nVertices(vertices.size())
   {
     {
       // s
-      const V3 p0 = lattice.icos[link[0]];
-      const V3 p1 = lattice.icos[link[1]];
+      const V3 p0 = icosahedral.icos[link[0]];
+      const V3 p1 = icosahedral.icos[link[1]];
       V3 theta = project( p0+p1 );
       theta *= M_PI;
       ms = rot(theta);
@@ -521,9 +674,9 @@ struct Orbits {
     }
     {
       // t
-      const V3 pa = lattice.icos[lattice.patches[ipatch][0]];
-      const V3 pb = lattice.icos[lattice.patches[ipatch][1]];
-      const V3 pd = lattice.icos[lattice.patches[ipatch][3]];
+      const V3 pa = icosahedral.icos[icosahedral.patches[ipatch][0]];
+      const V3 pb = icosahedral.icos[icosahedral.patches[ipatch][1]];
+      const V3 pd = icosahedral.icos[icosahedral.patches[ipatch][3]];
       V3 theta = project( pa+pb+pd );
       theta *= 2.0*M_PI/3.0;
 
@@ -545,15 +698,15 @@ struct Orbits {
 
   void GetOrbits(){
     orbits.clear();
-    for(const V3& x : lattice.vertices){
+    for(const V3& x : vertices){
       std::vector<Idx> orbit;
 
       for(int ig=0; ig<NIh; ig++){
         const M3 mg = Ih.rotation(ig, ms, mt);
         const V3 gx = mg*x;
 
-        for(int iy=0; iy<lattice.NVertices(); iy++){
-          const V3 y = lattice.vertices[iy];
+        for(int iy=0; iy<nVertices; iy++){
+          const V3 y = vertices[iy];
           if( is_identical(gx, y) ) {
             orbit.push_back(iy);
             break;
@@ -593,11 +746,51 @@ int main(){
   std::clog << std::scientific << std::setprecision(25);
 
   // --------------------
-  const Idx L = 2;
+  const int L = 2;
 
   RefinedIcosahedron lattice(L);
   std::cout << "# points" << std::endl
             << lattice.print() << std::endl;
+
+  {
+    for(int s=0; s<NPatches; s++){
+      for(int x=0; x<L; x++){
+        for(int y=0; y<L; y++){
+          const Coords n{x,y,s};
+          const Idx in = lattice.idx(n);
+
+          Coords nPX, nPY, nPZ;
+          lattice.shiftPX( nPX, n );
+          lattice.shiftPY( nPY, n );
+          lattice.shiftPZ( nPZ, n );
+          const Idx inPX = lattice.idx(nPX);
+          const Idx inPY = lattice.idx(nPY);
+          const Idx inPZ = lattice.idx(nPZ);
+
+          const V3 vn = lattice.vertices[in];
+          const V3 vnPX = lattice.vertices[inPX];
+          const V3 vnPY = lattice.vertices[inPY];
+          const V3 vnPZ = lattice.vertices[inPZ];
+
+          const double dx = (vn-vnPX).norm();
+          const double dy = (vn-vnPY).norm();
+          const double dz = (vn-vnPZ).norm();
+
+          std::cout << "@@ in = " << in << std::endl;
+          // std::cout << "@@ x,y,s = " << x << " " << y << " " << s << std::endl;
+          // std::cout << "+x x,y,s = " << nPX[0] << " " << nPX[1] << " " << nPX[2] << std::endl;
+          // std::cout << "+y x,y,s = " << nPY[0] << " " << nPY[1] << " " << nPY[2] << std::endl;
+          // std::cout << "+z x,y,s = " << nPZ[0] << " " << nPZ[1] << " " << nPZ[2] << std::endl;
+          std::cout << dx << std::endl;
+          std::cout << dy << std::endl;
+          std::cout << dz << std::endl;
+
+          // // for L=2
+          // assert( dx<0.7 );
+          // assert( dy<0.7 );
+          // assert( dz<0.7 );
+        }}}
+  }
 
   FullIcosahedralGroup Ih( "multtablemathematica.dat",
                            3, 19, 60 );
@@ -608,11 +801,22 @@ int main(){
   std::cout << "# Ih elems" << std::endl;
   std::cout << Ih.print() << std::endl;
 
+  {
+    // for simplicial
+    Orbits orbits(lattice, lattice.vertices, Ih, rot);
+    std::cout << "# orbits (simplicial)" << std::endl;
+    std::cout << orbits.print() << std::endl;
+  }
 
 
-  Orbits orbits(lattice, Ih, rot);
-  std::cout << "# orbits" << std::endl;
-  std::cout << orbits.print() << std::endl;
+  RefinedIcosahedronDual dual(lattice);
+  {
+    // for dual
+    Orbits orbits(lattice, dual.vertices, Ih, rot);
+    std::cout << "# orbits (dual)" << std::endl;
+    std::cout << orbits.print() << std::endl;
+  }
+
 
   return 0;
 }
