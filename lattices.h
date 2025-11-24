@@ -92,7 +92,6 @@ struct RefinedIcosahedron : Icosahedron{
 
       return Coords{xl0, xl1, s};
     }
-
   }
 
 
@@ -278,7 +277,7 @@ struct RefinedIcosahedron : Icosahedron{
   // basepoints
   void GetBasePoints( BasePoints& basePoints,
                       BaseTypes& baseTypes ) const {
-    assert( L%2==0 );
+    assert( L==1 || L%2==0 );
     basePoints.clear();
     baseTypes.clear();
     constexpr int s=0;
@@ -286,36 +285,38 @@ struct RefinedIcosahedron : Icosahedron{
     // type 0
     basePoints.push_back( idx(0,0,s) );
     baseTypes.push_back( 0 );
-    basePoints.push_back( idx(L/2,0,s) );
-    baseTypes.push_back( 0 );
 
-    // type 1
-    for(int x=L/2+1; 2*(2*x-L)<=x; x+=2){
-      basePoints.push_back( idx(x,2*x-L,s) );
-      baseTypes.push_back( 1 );
-    }
+    if(L!=1){
+      basePoints.push_back( idx(L/2,0,s) );
+      baseTypes.push_back( 0 );
 
-    // type 2
-    for(int x=2; 3*x/2<=L; x+=2){
-      basePoints.push_back( idx(x,x/2,s) );
-      baseTypes.push_back( 2 );
-    }
+      // type 1
+      for(int x=L/2+1; 2*(2*x-L)<=x; x+=2){
+        basePoints.push_back( idx(x,2*x-L,s) );
+        baseTypes.push_back( 1 );
+      }
 
-    // type 3
-    for(int x=1; x<L/2; x++){
-      basePoints.push_back( idx(x,0,s) );
-      baseTypes.push_back( 3 );
-    }
+      // type 2
+      for(int x=2; 3*x/2<=L; x+=2){
+        basePoints.push_back( idx(x,x/2,s) );
+        baseTypes.push_back( 2 );
+      }
 
-    // type 4
-    for(int x=0; x<=L/2; x++){
-      for(int y=0; y<=L/2; y++){
-        if( y==0 || 0>=x-2*y || 2*x-y>=L ) continue;
-        basePoints.push_back( idx(x,y,s) );
-        baseTypes.push_back( 4 );
+      // type 3
+      for(int x=1; x<L/2; x++){
+        basePoints.push_back( idx(x,0,s) );
+        baseTypes.push_back( 3 );
+      }
+
+      // type 4
+      for(int x=0; x<=L/2; x++){
+        for(int y=0; y<=L/2; y++){
+          if( y==0 || 0>=x-2*y || 2*x-y>=L ) continue;
+          basePoints.push_back( idx(x,y,s) );
+          baseTypes.push_back( 4 );
+        }
       }
     }
-
   }
 
 
@@ -345,6 +346,13 @@ struct RefinedIcosahedronDual {
   Idx idx( const FaceCoords& n ) const {
     const Idx in = simplicial.idx( Coords{n[0], n[1], n[2]} );
     return 2*in+n[3];
+  }
+
+  FaceCoords idx2FaceCoords( Idx i ) const { // copy i
+    const int type = i%2;
+    i /= 2;
+    const Coords n = simplicial.idx2Coords(i);
+    return FaceCoords{n[0],n[1],n[2],type};
   }
 
 
@@ -508,6 +516,46 @@ struct RefinedIcosahedronDual {
 
   // @@
   // basepoints
+  void GetBasePoints( BasePoints& basePoints,
+                      BaseTypes& baseTypes ) const {
+    basePoints.clear();
+    baseTypes.clear();
+    constexpr int s=0;
+
+    for(int x=0; x<L; x++){
+      for(int y=0; y<L; y++){
+        for( const int type : std::vector<int>{XZ, ZY} ){
+
+          // orthogonal coordinates (xp, yp)
+          // xp == x; yp==y-x/2;
+          // xp3 == 3*xp, yp2 == 2y
+          int xp3, yp2;
+
+          if(type==XZ){
+            xp3 = 3*x + 2;
+            yp2 = 2*y - x;
+          }
+          else { // type=ZY
+            xp3 = 3*x + 1;
+            yp2 = 2*y - x + 1;
+          }
+
+          if( 3*yp2+xp3>=0 && xp3-yp2-2*L<=0 && yp2<=0 ){ // if in fund domain
+            const bool isType1 = (xp3-yp2-2*L==0);
+            const bool isType2 = (yp2==0);
+            const bool isType3 = (3*yp2+xp3==0);
+
+            if(isType3) assert( false ); // no type 3
+
+            basePoints.push_back( idx(FaceCoords{x, y, s, type}) );
+            if(isType1&&isType2) baseTypes.push_back( 0 ); // type 0
+            else if(isType1) baseTypes.push_back( 1 ); // type 1
+            else if(isType2) baseTypes.push_back( 2 ); // type 2
+            else baseTypes.push_back( 4 ); // type 4
+          }
+        }}}
+  }
+
 
 };
 

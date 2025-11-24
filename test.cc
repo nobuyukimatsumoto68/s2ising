@@ -55,7 +55,7 @@ int main(){
   std::clog << std::scientific << std::setprecision(25);
 
   // --------------------
-  const int L = 4;
+  const int L = 8;
 
   RefinedIcosahedron lattice(L);
   std::cout << "# points" << std::endl
@@ -149,8 +149,7 @@ int main(){
   std::cout << "# Ih elems" << std::endl;
   std::cout << Ih.print() << std::endl;
 
-
-  if(L%2==0){
+  {
     BasePoints basePoints;
     BaseTypes baseTypes;
     lattice.GetBasePoints( basePoints, baseTypes );
@@ -256,6 +255,20 @@ int main(){
             }
           }
         }}}
+  }
+
+
+  {
+    BasePoints basePoints;
+    BaseTypes baseTypes;
+    dual.GetBasePoints( basePoints, baseTypes );
+
+    for(Idx i=0; i<basePoints.size(); i++){
+      std::cout << "# basepoints" << std::endl;
+      std::cout << "@@@ i = " << i << " type = " << baseTypes[i] << std::endl;
+      const FaceCoords f = dual.idx2FaceCoords( basePoints[i] );
+      std::cout << "x,y,s,type = " << f[0] << " " << f[1] << " " << f[2] << " " << f[3] << std::endl;
+    }
   }
 
 
