@@ -6,5 +6,5 @@ LDFLAGS=-L"/mnt/hdd_barracuda/opt/hdf5-v1.14.0/lib/" -L"/usr/lib/" -L"/usr/local
 # LDFLAGS=-L"/usr/local/lib/" -lgsl -lgslcblas -lm
 
 all:
-	$(CXX) geometry.cc $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) -o geometry.o
+	$(CXX) test.cc $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) -o test.o
 	$(CXX) gsl.cc $(CXXFLAGS) $(INCLUDES) $(LDFLAGS) -o gsl.o
