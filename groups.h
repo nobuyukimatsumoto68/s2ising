@@ -332,6 +332,9 @@ struct Orbits {
           }
         }
       }
+
+      // std::cout << "debug. x = " << x.transpose() << std::endl;
+      // std::cout << "debug. orbit.size() = " << orbit.size() << std::endl;
       assert( orbit.size()==NIh );
       orbits.push_back(orbit);
     }

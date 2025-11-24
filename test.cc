@@ -55,7 +55,7 @@ int main(){
   std::clog << std::scientific << std::setprecision(25);
 
   // --------------------
-  const int L = 2;
+  const int L = 4;
 
   RefinedIcosahedron lattice(L);
   std::cout << "# points" << std::endl
@@ -99,6 +99,10 @@ int main(){
             // assert( dx<0.7 );
             // assert( dy<0.7 );
             // assert( dz<0.7 );
+            // // for L=4
+            // assert( dx<0.4 );
+            // assert( dy<0.4 );
+            // assert( dz<0.4 );
           }
 
           Coords nMX, nMY, nMZ;
@@ -113,6 +117,7 @@ int main(){
             std::cout << "-x x,y,s = " << nMX[0] << " " << nMX[1] << " " << nMX[2] << std::endl;
             std::cout << dx << std::endl;
             // assert( dx<0.7 );
+            // assert( dx<0.4 );
           }
           if(nMY[2]!=PatchIdxVoid){
             const Idx inMY = lattice.idx(nMY);
@@ -121,6 +126,7 @@ int main(){
             std::cout << "-x x,y,s = " << nMY[0] << " " << nMY[1] << " " << nMY[2] << std::endl;
             std::cout << dy << std::endl;
             // assert( dy<0.7 );
+            // assert( dy<0.4 );
           }
           if(nMZ[2]!=PatchIdxVoid){
             const Idx inMZ = lattice.idx(nMZ);
@@ -129,6 +135,7 @@ int main(){
             std::cout << "-x x,y,s = " << nMZ[0] << " " << nMZ[1] << " " << nMZ[2] << std::endl;
             std::cout << dz << std::endl;
             // assert( dz<0.7 );
+            // assert( dz<0.4 );
           }
         }}}
   }
@@ -142,12 +149,27 @@ int main(){
   std::cout << "# Ih elems" << std::endl;
   std::cout << Ih.print() << std::endl;
 
+
+  if(L%2==0){
+    BasePoints basePoints;
+    BaseTypes baseTypes;
+    lattice.GetBasePoints( basePoints, baseTypes );
+
+    for(Idx i=0; i<basePoints.size(); i++){
+      std::cout << "# basepoints" << std::endl;
+      std::cout << "@@@ i = " << i << " type = " << baseTypes[i] << std::endl;
+      const Coords n = lattice.idx2Coords( basePoints[i] );
+      std::cout << "x,y,s = " << n[0] << " " << n[1] << " " << n[2] << std::endl;
+    }
+  }
+
   {
     // for simplicial
     Orbits orbits(lattice.vertices, lattice, Ih, rot);
     std::cout << "# orbits (simplicial)" << std::endl;
     std::cout << orbits.print() << std::endl;
   }
+
 
 
   RefinedIcosahedronDual dual(lattice);
@@ -187,10 +209,10 @@ int main(){
             std::cout << dB << std::endl;
             std::cout << dC << std::endl;
 
-            // // for L=2
-            // assert( dA<0.7 );
-            // assert( dB<0.7 );
-            // assert( dC<0.7 );
+            // // for L=4
+            // assert( dA<0.2 );
+            // assert( dB<0.2 );
+            // assert( dC<0.2 );
           }
 
           {
@@ -212,6 +234,7 @@ int main(){
               std::cout << "-A x,y,s = " << fMA[0] << " " << fMA[1] << " " << fMA[2] << " " << fMA[3] << std::endl;
               std::cout << dx << std::endl;
               // assert( dx<0.7 );
+              // assert( dx<0.2 );
             }
             if(fMB[2]!=PatchIdxVoid){
               const Idx ifMB = dual.idx(fMB);
@@ -220,6 +243,7 @@ int main(){
               std::cout << "-B x,y,s = " << fMB[0] << " " << fMB[1] << " " << fMB[2] << " " << fMB[3] << std::endl;
               std::cout << dy << std::endl;
               // assert( dy<0.7 );
+              // assert( dy<0.2 );
             }
             if(fMC[2]!=PatchIdxVoid){
               const Idx ifMC = dual.idx(fMC);
@@ -228,14 +252,11 @@ int main(){
               std::cout << "-C x,y,s = " << fMC[0] << " " << fMC[1] << " " << fMC[2] << " " << fMC[3] << std::endl;
               std::cout << dz << std::endl;
               // assert( dz<0.7 );
+              // assert( dz<0.2 );
             }
           }
         }}}
   }
-
-
-
-
 
 
   {

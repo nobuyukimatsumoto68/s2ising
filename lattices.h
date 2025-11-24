@@ -9,7 +9,8 @@ using Vertices = std::vector<V3>;
 using Coords = std::array<int, 3>; // (x,y,s)
 using FaceCoords = std::array<int, 4>; // (x,y,s,XZ/ZY)
 
-
+using BasePoints = std::vector<Idx>;
+using BaseTypes = std::vector<int>;
 
 
 inline V3 project( const V3& x ) { return x/x.norm(); }
@@ -78,6 +79,22 @@ struct RefinedIcosahedron : Icosahedron{
   }
   Idx idx( const Coords& n ) const { return idx(n[0], n[1], n[2]); }
 
+  Coords idx2Coords( Idx i ) const { // copy i
+    if(i==idxS()) return Coords{0,0,PatchIdxS};
+    else if(i==idxN()) return Coords{0,0,PatchIdxN};
+    else{
+      const int xl0 = i%L;
+      i /= L;
+      const int xl1 = i%L;
+      i /= L;
+      const int s = i;
+      assert( s<NPatches );
+
+      return Coords{xl0, xl1, s};
+    }
+
+  }
+
 
   // -----------------------------
 
@@ -145,7 +162,7 @@ struct RefinedIcosahedron : Icosahedron{
     if(x==L-1){ // steps over the patch bdy
       if(s<NPatches/2){ // southern hemisphere
         if(y==0) np = Coords{-1, -1, PatchIdxS};
-        else np = Coords{y, 0, (s+1)%(NPatches/2)};
+        else np = Coords{L-y, 0, (s+1)%(NPatches/2)};
       }
       else np = Coords{0, y, (s-4)%(NPatches/2)}; // northern hemisphere
     }
@@ -257,8 +274,49 @@ struct RefinedIcosahedron : Icosahedron{
     }
   }
 
-  // @@
+
   // basepoints
+  void GetBasePoints( BasePoints& basePoints,
+                      BaseTypes& baseTypes ) const {
+    assert( L%2==0 );
+    basePoints.clear();
+    baseTypes.clear();
+    constexpr int s=0;
+
+    // type 0
+    basePoints.push_back( idx(0,0,s) );
+    baseTypes.push_back( 0 );
+    basePoints.push_back( idx(L/2,0,s) );
+    baseTypes.push_back( 0 );
+
+    // type 1
+    for(int x=L/2+1; 2*(2*x-L)<=x; x+=2){
+      basePoints.push_back( idx(x,2*x-L,s) );
+      baseTypes.push_back( 1 );
+    }
+
+    // type 2
+    for(int x=2; 3*x/2<=L; x+=2){
+      basePoints.push_back( idx(x,x/2,s) );
+      baseTypes.push_back( 2 );
+    }
+
+    // type 3
+    for(int x=1; x<L/2; x++){
+      basePoints.push_back( idx(x,0,s) );
+      baseTypes.push_back( 3 );
+    }
+
+    // type 4
+    for(int x=0; x<=L/2; x++){
+      for(int y=0; y<=L/2; y++){
+        if( y==0 || 0>=x-2*y || 2*x-y>=L ) continue;
+        basePoints.push_back( idx(x,y,s) );
+        baseTypes.push_back( 4 );
+      }
+    }
+
+  }
 
 
 };
@@ -276,7 +334,7 @@ struct RefinedIcosahedronDual {
     , L(simplicial.L)
     , Nx( simplicial.idx(Coords{L-1,L-1,NPatches-1})+1 )
   {
-    FillDualPoints();
+    FillPointsCircumCenterDual();
     assert(vertices.size()==2*Nx);
   }
 
@@ -410,7 +468,8 @@ struct RefinedIcosahedronDual {
   }
 
 
-  void FillDualPoints(){
+  // with circumcenterdual
+  void FillPointsCircumCenterDual(){
     vertices.clear();
 
     Idx counter=0;
