@@ -32,17 +32,140 @@ using Complex = std::complex<double>;
 
 
 
-struct FundamentalOptimizer{
-  // RefinedIcosahedronDual& dual;
-  // RefinedIcosahedron& lattice;
+class DualLatticeAngleCostEvaluator{
+private:
+  std::vector<double> coordsType1;
+  std::vector<double> coordsType2;
+  std::vector<std::array<double,2>> coordsType4;
 
-  // FundamentalOptimizer
-  // ( const RefinedIcosahedronDual& dual_ )
-  //   : dual(dual_)
-  //   , lattice(dual.simplicial)
-  // {}
+public:
+  RefinedIcosahedronDual& dual;
+  Orbits orbits;
 
-  // assign indep params for the fund; categorize class
+  BasePoints basePoints;
+  BaseTypes baseTypes;
+
+  int nType1;
+  int nType2;
+  int nType4;
+
+  // pointers collecting all the coordinates
+  std::vector<double*> p;
+
+  DualLatticeAngleCostEvaluator
+  (
+   RefinedIcosahedronDual& dual_,
+   const Icosahedron& icos_,
+   const FullIcosahedralGroup& Ih_,
+   const Rotation& rot_
+   )
+    : dual(dual_)
+    , orbits( dual.vertices,
+              dual.basePoints,
+              dual.baseTypes,
+              icos_, Ih_, rot_ )
+  {
+    nType1=0, nType2=0, nType4=0;
+    for(const int type : dual.baseTypes){
+      if(type==1) nType1++;
+      else if(type==2) nType2++;
+      else if(type==4) nType4++;
+      else assert(false);
+    }
+
+    coordsType1.clear();
+    coordsType1.resize(nType1);
+    coordsType2.clear();
+    coordsType2.resize(nType2);
+    coordsType4.clear();
+    coordsType4.resize(nType4);
+
+    FillBaseCoordsConvenient();
+    p.clear();
+    for(Idx i=0; i<coordsType1.size(); i++) p.push_back( coordsType1.data()+i );
+    for(Idx i=0; i<coordsType2.size(); i++) p.push_back( coordsType2.data()+i );
+    for(Idx i=0; i<coordsType4.size(); i++) {
+      p.push_back( coordsType4[i].data() );
+      p.push_back( coordsType4[i].data()+1 );
+    }
+
+    FillBasePointsFromCoords();
+    orbits.RefreshOrbits();
+  }
+
+
+  void FillBaseCoordsConvenient(){
+    // vertices.clear();
+
+    // Idx counter=0;
+    // for(int s=0; s<NPatches; s++){
+    //   for(int y=0; y<L; y++){
+    //     for(int x=0; x<L; x++){
+    //       const Coords n{x,y,s};
+    //       const Idx in = simplicial.idx(n);
+
+    //       Coords nPX, nPY, nPZ;
+    //       simplicial.shiftPX( nPX, n );
+    //       simplicial.shiftPY( nPY, n );
+    //       simplicial.shiftPZ( nPZ, n );
+    //       const Idx inPX = simplicial.idx(nPX);
+    //       const Idx inPY = simplicial.idx(nPY);
+    //       const Idx inPZ = simplicial.idx(nPZ);
+
+    //       const V3 vn = simplicial.vertices[in];
+    //       const V3 vnPX = simplicial.vertices[inPX];
+    //       const V3 vnPY = simplicial.vertices[inPY];
+    //       const V3 vnPZ = simplicial.vertices[inPZ];
+
+    //       // xz face
+    //       V3 r = project( circumcenter(vn, vnPX, vnPZ) );
+    //       assert(vertices.size()==idx(FaceCoords{x,y,s,XZ}));
+    //       vertices.push_back( r );
+
+    //       // zy face
+    //       r = project( circumcenter(vn, vnPZ, vnPY ) );
+    //       assert(vertices.size()==idx(FaceCoords{x,y,s,ZY}));
+    //       vertices.push_back( r );
+    //     }}}
+
+    // assert( vertices.size()==NVertices() );
+  }
+
+  void FillBasePointsFromCoords(){
+
+  }
+
+
+  double cost() const {
+    double sqrd = 0.0;
+
+    for(const Idx iff : dual.basePoints){
+
+      const V3 rf = dual.vertices[iff];
+      const FaceCoords nf = dual.idx2FaceCoords( iff );
+
+      FaceCoords nfA, nfB, nfC;
+      dual.shiftPA( nfA, nf );
+      dual.shiftPB( nfB, nf );
+      dual.shiftPC( nfC, nf );
+
+      const V3 rfA = dual.vertices[dual.idx(nfA)];
+      const V3 rfB = dual.vertices[dual.idx(nfB)];
+      const V3 rfC = dual.vertices[dual.idx(nfC)];
+
+      const double A0B = sphericalAngle( rfA, rf, rfB );
+      const double B0C = sphericalAngle( rfB, rf, rfC );
+      const double C0A = sphericalAngle( rfC, rf, rfA );
+
+      assert( std::abs( A0B+B0C+C0A-M_PI ) < 1.0e-14 );
+
+      const double diff = A0B - B0C;
+      sqrd += diff*diff;
+    }
+    return std::sqrt( sqrd/dual.basePoints.size() );
+  }
+
+  
 
 };
 
@@ -150,21 +273,24 @@ int main(){
   std::cout << Ih.print() << std::endl;
 
   {
-    BasePoints basePoints;
-    BaseTypes baseTypes;
-    lattice.GetBasePoints( basePoints, baseTypes );
+    // BasePoints basePoints;
+    // BaseTypes baseTypes;
+    // lattice.GetBasePoints( basePoints, baseTypes );
 
-    for(Idx i=0; i<basePoints.size(); i++){
+    for(Idx i=0; i<lattice.basePoints.size(); i++){
       std::cout << "# basepoints" << std::endl;
-      std::cout << "@@@ i = " << i << " type = " << baseTypes[i] << std::endl;
-      const Coords n = lattice.idx2Coords( basePoints[i] );
+      std::cout << "@@@ i = " << i << " type = " << lattice.baseTypes[i] << std::endl;
+      const Coords n = lattice.idx2Coords( lattice.basePoints[i] );
       std::cout << "x,y,s = " << n[0] << " " << n[1] << " " << n[2] << std::endl;
     }
   }
 
   {
     // for simplicial
-    Orbits orbits(lattice.vertices, lattice, Ih, rot);
+    Orbits orbits(lattice.vertices,
+                  lattice.basePoints,
+                  lattice.baseTypes,
+                  lattice, Ih, rot);
     std::cout << "# orbits (simplicial)" << std::endl;
     std::cout << orbits.print() << std::endl;
   }
@@ -259,24 +385,32 @@ int main(){
 
 
   {
-    BasePoints basePoints;
-    BaseTypes baseTypes;
-    dual.GetBasePoints( basePoints, baseTypes );
+    // BasePoints basePoints;
+    // BaseTypes baseTypes;
+    // dual.GetBasePoints( basePoints, baseTypes );
 
-    for(Idx i=0; i<basePoints.size(); i++){
+    for(Idx i=0; i<dual.basePoints.size(); i++){
       std::cout << "# basepoints" << std::endl;
-      std::cout << "@@@ i = " << i << " type = " << baseTypes[i] << std::endl;
-      const FaceCoords f = dual.idx2FaceCoords( basePoints[i] );
+      std::cout << "@@@ i = " << i << " type = " << dual.baseTypes[i] << std::endl;
+      const FaceCoords f = dual.idx2FaceCoords( dual.basePoints[i] );
       std::cout << "x,y,s,type = " << f[0] << " " << f[1] << " " << f[2] << " " << f[3] << std::endl;
     }
-  }
 
 
-  {
     // for dual
-    Orbits orbits(dual.vertices, lattice, Ih, rot);
-    std::cout << "# orbits (dual)" << std::endl;
-    std::cout << orbits.print() << std::endl;
+    Orbits orbits(dual.vertices,
+                  dual.basePoints,
+                  dual.baseTypes,
+                  lattice, Ih, rot);
+    // std::cout << "# orbits (dual)" << std::endl;
+    // std::cout << orbits.print() << std::endl;
+
+    const Vertices fs_old = dual.vertices;
+    orbits.RefreshOrbits();
+    const Vertices fs_new = dual.vertices;
+    const double norm2 = squaredNorm(fs_old-fs_new);
+    std::cout << "norm = " << std::sqrt( norm2/fs_old.size() ) << std::endl;
+    assert( std::sqrt( norm2/fs_old.size() )<1.0e-14 );
   }
 
 

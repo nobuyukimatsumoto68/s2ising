@@ -27,9 +27,42 @@ V3 circumcenter(const V3& r0, const V3& r1, const V3& r2){
   return numer/denom + r0;
 }
 
+double arcLength( const V3& rA, const V3& rB ){
+  const double AB = rA.dot(rB) / rA.norm() / rB.norm();
+  return std::acos(AB);
+}
+
+// <CAB
+// https://www.johndcook.com/blog/spherical_trigonometry/
+double sphericalAngle( const V3& rC, const V3& rA, const V3& rB ){
+  const double b = arcLength(rC, rA);
+  const double c = arcLength(rA, rB);
+  const double a = arcLength(rB, rC);
+
+  const double numer = std::cos(a)-std::cos(b)*std::cos(c);
+  const double denom = std::sin(b)*std::sin(c);
+  return std::acos(numer/denom);
+}
 
 
 
+Vertices operator+ ( Vertices r1, const Vertices& r2 ){ // copy
+  assert(r1.size()==r2.size());
+  for(Idx i=0; i<r1.size(); i++) r1[i] += r2[i];
+  return r1;
+}
+
+Vertices operator- ( Vertices r1, const Vertices& r2 ){ // copy
+  assert(r1.size()==r2.size());
+  for(Idx i=0; i<r1.size(); i++) r1[i] -= r2[i];
+  return r1;
+}
+
+double squaredNorm ( const Vertices& r ){
+  double res = 0.0;
+  for(Idx i=0; i<r.size(); i++) res += r[i].squaredNorm();
+  return res;
+}
 
 
 
@@ -37,12 +70,16 @@ struct RefinedIcosahedron : Icosahedron{
   const int L;
   Vertices vertices;
 
+  BasePoints basePoints;
+  BaseTypes baseTypes;
+
   // -----------------------------
 
   RefinedIcosahedron( const int L_ )
     : L(L_)
   {
     FillVerticesSimpleRefinement();
+    GetBasePoints();
   }
 
   // -----------------------------
@@ -275,8 +312,7 @@ struct RefinedIcosahedron : Icosahedron{
 
 
   // basepoints
-  void GetBasePoints( BasePoints& basePoints,
-                      BaseTypes& baseTypes ) const {
+  void GetBasePoints(){
     assert( L==1 || L%2==0 );
     basePoints.clear();
     baseTypes.clear();
@@ -330,6 +366,9 @@ struct RefinedIcosahedronDual {
 
   Vertices vertices;
 
+  BasePoints basePoints;
+  BaseTypes baseTypes;
+
   RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
     : simplicial(simplicial_)
     , L(simplicial.L)
@@ -337,6 +376,7 @@ struct RefinedIcosahedronDual {
   {
     FillPointsCircumCenterDual();
     assert(vertices.size()==2*Nx);
+    GetBasePoints();
   }
 
   Idx NVertices() const { return simplicial.NFaces(); }
@@ -516,8 +556,7 @@ struct RefinedIcosahedronDual {
 
   // @@
   // basepoints
-  void GetBasePoints( BasePoints& basePoints,
-                      BaseTypes& baseTypes ) const {
+  void GetBasePoints(){
     basePoints.clear();
     baseTypes.clear();
     constexpr int s=0;

@@ -259,9 +259,12 @@ struct FullIcosahedralGroup {
 
 
 
-
 struct Orbits {
   Vertices& vertices; // reference
+
+  const BasePoints& basePoints;
+  const BaseTypes& baseTypes;
+
   const Icosahedron& icos;
   const FullIcosahedralGroup& Ih;
   const Rotation& rot;
@@ -271,12 +274,16 @@ struct Orbits {
   std::vector<std::vector<Idx>> orbits;
 
   Orbits(Vertices& vertices_,
+         const BasePoints& basePoints_,
+         const BaseTypes& baseTypes_,
          const Icosahedron& icos_,
          const FullIcosahedralGroup& Ih_,
          const Rotation& rot_,
          const std::array<int, 2>& link=std::array<int, 2>{0,1},
          const int ipatch=0 )
     : vertices(vertices_)
+    , basePoints(basePoints_)
+    , baseTypes(baseTypes_)
     , icos(icos_)
     , Ih(Ih_)
     , rot(rot_)
@@ -340,15 +347,16 @@ struct Orbits {
     }
   }
 
-  void RefreshOrbits( const std::vector<Idx>& basepts ){
-    for(const Idx in : basepts){
+  void RefreshOrbits(){
+    for(const Idx in : basePoints){
       const V3 r = vertices[in];
       const auto orbit = orbits[in];
 
       for(int ig=0; ig<NIh; ig++){
         const M3 mg = Ih.rotation(ig, ms, mt);
         const V3 gr = mg*r;
-        vertices[orbit[ig]] = gr;
+        const Idx igr = orbit[ig];
+        if(in!=igr) vertices[igr] = gr;
       }
     }
   }
