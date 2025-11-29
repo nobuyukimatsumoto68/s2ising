@@ -22,6 +22,8 @@ struct Icosahedron {
   const double c3 = 1.0/std::sqrt(5.);
   const double s3 = 2.0/std::sqrt(5.);
 
+  const double len = std::sqrt( 2.0-2.0/std::sqrt(5.0) );
+
   IcosVertices icos;
   PatchEdges patches;
 

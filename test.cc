@@ -27,147 +27,11 @@ using Complex = std::complex<double>;
 #include "icosahedron.h"
 #include "lattices.h"
 #include "groups.h"
+#include "dual_optimizer.h"
 
 
 
 
-
-class DualLatticeAngleCostEvaluator{
-private:
-  std::vector<double> coordsType1;
-  std::vector<double> coordsType2;
-  std::vector<std::array<double,2>> coordsType4;
-
-public:
-  RefinedIcosahedronDual& dual;
-  Orbits orbits;
-
-  BasePoints basePoints;
-  BaseTypes baseTypes;
-
-  int nType1;
-  int nType2;
-  int nType4;
-
-  // pointers collecting all the coordinates
-  std::vector<double*> p;
-
-  DualLatticeAngleCostEvaluator
-  (
-   RefinedIcosahedronDual& dual_,
-   const Icosahedron& icos_,
-   const FullIcosahedralGroup& Ih_,
-   const Rotation& rot_
-   )
-    : dual(dual_)
-    , orbits( dual.vertices,
-              dual.basePoints,
-              dual.baseTypes,
-              icos_, Ih_, rot_ )
-  {
-    nType1=0, nType2=0, nType4=0;
-    for(const int type : dual.baseTypes){
-      if(type==1) nType1++;
-      else if(type==2) nType2++;
-      else if(type==4) nType4++;
-      else assert(false);
-    }
-
-    coordsType1.clear();
-    coordsType1.resize(nType1);
-    coordsType2.clear();
-    coordsType2.resize(nType2);
-    coordsType4.clear();
-    coordsType4.resize(nType4);
-
-    FillBaseCoordsConvenient();
-    p.clear();
-    for(Idx i=0; i<coordsType1.size(); i++) p.push_back( coordsType1.data()+i );
-    for(Idx i=0; i<coordsType2.size(); i++) p.push_back( coordsType2.data()+i );
-    for(Idx i=0; i<coordsType4.size(); i++) {
-      p.push_back( coordsType4[i].data() );
-      p.push_back( coordsType4[i].data()+1 );
-    }
-
-    FillBasePointsFromCoords();
-    orbits.RefreshOrbits();
-  }
-
-
-  void FillBaseCoordsConvenient(){
-    // vertices.clear();
-
-    // Idx counter=0;
-    // for(int s=0; s<NPatches; s++){
-    //   for(int y=0; y<L; y++){
-    //     for(int x=0; x<L; x++){
-    //       const Coords n{x,y,s};
-    //       const Idx in = simplicial.idx(n);
-
-    //       Coords nPX, nPY, nPZ;
-    //       simplicial.shiftPX( nPX, n );
-    //       simplicial.shiftPY( nPY, n );
-    //       simplicial.shiftPZ( nPZ, n );
-    //       const Idx inPX = simplicial.idx(nPX);
-    //       const Idx inPY = simplicial.idx(nPY);
-    //       const Idx inPZ = simplicial.idx(nPZ);
-
-    //       const V3 vn = simplicial.vertices[in];
-    //       const V3 vnPX = simplicial.vertices[inPX];
-    //       const V3 vnPY = simplicial.vertices[inPY];
-    //       const V3 vnPZ = simplicial.vertices[inPZ];
-
-    //       // xz face
-    //       V3 r = project( circumcenter(vn, vnPX, vnPZ) );
-    //       assert(vertices.size()==idx(FaceCoords{x,y,s,XZ}));
-    //       vertices.push_back( r );
-
-    //       // zy face
-    //       r = project( circumcenter(vn, vnPZ, vnPY ) );
-    //       assert(vertices.size()==idx(FaceCoords{x,y,s,ZY}));
-    //       vertices.push_back( r );
-    //     }}}
-
-    // assert( vertices.size()==NVertices() );
-  }
-
-  void FillBasePointsFromCoords(){
-
-  }
-
-
-  double cost() const {
-    double sqrd = 0.0;
-
-    for(const Idx iff : dual.basePoints){
-
-      const V3 rf = dual.vertices[iff];
-      const FaceCoords nf = dual.idx2FaceCoords( iff );
-
-      FaceCoords nfA, nfB, nfC;
-      dual.shiftPA( nfA, nf );
-      dual.shiftPB( nfB, nf );
-      dual.shiftPC( nfC, nf );
-
-      const V3 rfA = dual.vertices[dual.idx(nfA)];
-      const V3 rfB = dual.vertices[dual.idx(nfB)];
-      const V3 rfC = dual.vertices[dual.idx(nfC)];
-
-      const double A0B = sphericalAngle( rfA, rf, rfB );
-      const double B0C = sphericalAngle( rfB, rf, rfC );
-      const double C0A = sphericalAngle( rfC, rf, rfA );
-
-      assert( std::abs( A0B+B0C+C0A-M_PI ) < 1.0e-14 );
-
-      const double diff = A0B - B0C;
-      sqrd += diff*diff;
-    }
-    return std::sqrt( sqrd/dual.basePoints.size() );
-  }
-
-  
-
-};
 
 
 
@@ -411,6 +275,29 @@ int main(){
     const double norm2 = squaredNorm(fs_old-fs_new);
     std::cout << "norm = " << std::sqrt( norm2/fs_old.size() ) << std::endl;
     assert( std::sqrt( norm2/fs_old.size() )<1.0e-14 );
+
+    {
+      DualLatticeOptimizerBase opt(dual, lattice, Ih, rot);
+
+      for(Idx i=0; i<opt.basePoints.size(); i++){
+        const Idx ir = opt.basePoints[i];
+        std::cout << "type: " << opt.baseTypes[i] << std::endl;
+
+        // const Coords coords = .idx2Coords( ir );
+        const V3 r = dual.vertices[ir];
+        // const XiCoords xi = opt.XiProjector(r);
+        // std::cout << "xy: " << xi[0] << " " << xi[1] << std::endl;
+
+        const V3 check = opt.embedXi( opt.XiProjector(r) );
+        assert( (check-r).norm() < 1.0e-14 );
+        const V3 check2 = opt.embedZeta( opt.ZetaProjector(r) );
+        assert( (check2-r).norm() < 1.0e-14 );
+
+        std::cout << "types: " << opt.is_type1(r)
+                  << " " << opt.is_type2(r) << std::endl;
+      }
+    }
+
   }
 
 

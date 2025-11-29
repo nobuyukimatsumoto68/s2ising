@@ -9,6 +9,7 @@ using Vertices = std::vector<V3>;
 using Coords = std::array<int, 3>; // (x,y,s)
 using FaceCoords = std::array<int, 4>; // (x,y,s,XZ/ZY)
 
+
 using BasePoints = std::vector<Idx>;
 using BaseTypes = std::vector<int>;
 
@@ -32,17 +33,7 @@ double arcLength( const V3& rA, const V3& rB ){
   return std::acos(AB);
 }
 
-// <CAB
-// https://www.johndcook.com/blog/spherical_trigonometry/
-double sphericalAngle( const V3& rC, const V3& rA, const V3& rB ){
-  const double b = arcLength(rC, rA);
-  const double c = arcLength(rA, rB);
-  const double a = arcLength(rB, rC);
 
-  const double numer = std::cos(a)-std::cos(b)*std::cos(c);
-  const double denom = std::sin(b)*std::sin(c);
-  return std::acos(numer/denom);
-}
 
 
 
@@ -130,6 +121,8 @@ struct RefinedIcosahedron : Icosahedron{
       return Coords{xl0, xl1, s};
     }
   }
+
+  ////////
 
 
   // -----------------------------
