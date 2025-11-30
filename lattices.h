@@ -513,7 +513,6 @@ struct RefinedIcosahedronDual {
   void FillPointsCircumCenterDual(){
     vertices.clear();
 
-    Idx counter=0;
     for(int s=0; s<NPatches; s++){
       for(int y=0; y<L; y++){
         for(int x=0; x<L; x++){

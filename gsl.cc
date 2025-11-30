@@ -7,8 +7,19 @@
 /* Paraboloid centered on (p[0],p[1]), with
    scale factors (p[2],p[3]) and minimum p[4] */
 
-double
-my_f (const gsl_vector *v, void *params)
+double my_f (const gsl_vector *v, void *params){
+  double x, y;
+  double *p = (double *)params;
+
+  x = gsl_vector_get(v, 0);
+  y = gsl_vector_get(v, 1);
+
+  return p[2] * (x - p[0]) * (x - p[0]) + p[3] * (y - p[1]) * (y - p[1]) + p[4];
+}
+
+/* The gradient of f, df = (df/dx, df/dy). */
+void my_df (const gsl_vector *v, void *params,
+            gsl_vector *df)
 {
   double x, y;
   double *p = (double *)params;
@@ -16,19 +27,25 @@ my_f (const gsl_vector *v, void *params)
   x = gsl_vector_get(v, 0);
   y = gsl_vector_get(v, 1);
 
-  return p[2] * (x - p[0]) * (x - p[0]) +
-           p[3] * (y - p[1]) * (y - p[1]) + p[4];
+  gsl_vector_set(df, 0, 2.0 * p[2] * (x - p[0]));
+  gsl_vector_set(df, 1, 2.0 * p[3] * (y - p[1]));
+}
+
+/* Compute both f and df together. */
+void
+my_fdf (const gsl_vector *x, void *params,
+        double *f, gsl_vector *df)
+{
+  *f = my_f(x, params);
+  my_df(x, params, df);
 }
 
 
 
-int
-main(void)
-{
+int main(void){
   double par[5] = {1.0, 2.0, 10.0, 20.0, 30.0};
 
-  const gsl_multimin_fminimizer_type *T =
-    gsl_multimin_fminimizer_nmsimplex2;
+  const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
   gsl_multimin_fminimizer *s = NULL;
   gsl_vector *ss, *x;
   gsl_multimin_function minex_func;
@@ -54,29 +71,23 @@ main(void)
   s = gsl_multimin_fminimizer_alloc (T, 2);
   gsl_multimin_fminimizer_set (s, &minex_func, x, ss);
 
-  do
-    {
-      iter++;
-      status = gsl_multimin_fminimizer_iterate(s);
+  do{
+    iter++;
+    status = gsl_multimin_fminimizer_iterate(s);
 
-      if (status)
-        break;
+    if (status) break;
 
-      size = gsl_multimin_fminimizer_size (s);
-      status = gsl_multimin_test_size (size, 1e-8);
+    size = gsl_multimin_fminimizer_size (s);
+    status = gsl_multimin_test_size (size, 1e-8);
 
-      if (status == GSL_SUCCESS)
-        {
-          printf ("converged to minimum at\n");
-        }
+    if (status == GSL_SUCCESS) printf ("converged to minimum at\n");
 
-      printf ("%15d %10.15e %10.15e f() = %7.15f size = %.15f\n",
-              iter,
-              gsl_vector_get (s->x, 0),
-              gsl_vector_get (s->x, 1),
-              s->fval, size);
-    }
-  while (status == GSL_CONTINUE && iter < 1000);
+    printf ("%15d %10.15e %10.15e f() = %7.15f size = %.15f\n",
+            iter,
+            gsl_vector_get (s->x, 0),
+            gsl_vector_get (s->x, 1),
+            s->fval, size);
+  } while (status == GSL_CONTINUE && iter < 1000);
 
   gsl_vector_free(x);
   gsl_vector_free(ss);

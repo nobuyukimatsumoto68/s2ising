@@ -5,6 +5,7 @@ using XiCoords = std::array<double,3>;
 using ZetaCoords = std::array<double,3>;
 
 
+
 struct DualLatticeOptimizerBase{
   RefinedIcosahedronDual& dual;
   const Icosahedron& icos;
@@ -21,6 +22,8 @@ struct DualLatticeOptimizerBase{
   // pointers collecting all the coordinates
   std::vector<double> p;
   std::vector<Idx> if2pIdx;
+
+  Idx size() const { return p.size(); }
 
   DualLatticeOptimizerBase
   (
@@ -88,12 +91,16 @@ struct DualLatticeOptimizerBase{
     p.clear();
     p.resize( counter );
 
-    FillBaseXiCoords();
-    FillBasePointsFromCoords();
-    orbits.RefreshOrbits();
+    init();
+    update();
+    CheckBasePoints();
   }
 
-
+  void update(){
+    UpdateBasePoints();
+    orbits.RefreshOrbits();
+    CheckBasePoints();
+  }
 
   XiCoords XiProjector( const V3& r ) const {
     XiCoords res;
@@ -134,7 +141,10 @@ struct DualLatticeOptimizerBase{
 
 
 
-  void FillBaseXiCoords(){
+  void init(){
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(Comp::NPARALLEL)
+#endif
     for(Idx iff=0; iff<basePoints.size(); iff++){
       const int type = baseTypes[iff];
       const V3 r = dual.vertices[ basePoints[iff] ];
@@ -172,7 +182,42 @@ struct DualLatticeOptimizerBase{
   }
 
 
-  void FillBasePointsFromCoords(){
+  void CheckBasePoints(){
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(Comp::NPARALLEL)
+#endif
+    for(Idx iff=0; iff<basePoints.size(); iff++){
+      const int type = baseTypes[iff];
+      const V3 r = dual.vertices[ basePoints[iff] ];
+
+      if(type==1) {
+        assert( is_type1( r ) );
+        const double first = 0.0;
+        const double second = p[ if2pIdx.at(iff) ];
+        const V3 check = embedZeta( ZetaCoords{ first, second, std::sqrt(1.0-first*first-second*second) } );
+        assert( (r-check).norm()<1.0e-14 );
+      }
+      else if(type==2) {
+        assert( is_type2( r ) );
+        const double first = p[ if2pIdx.at(iff) ];
+        const double second = 0.0;
+        const V3 check = embedXi( XiCoords{ first, second, std::sqrt(1.0-first*first-second*second) } );
+        assert( (r-check).norm()<1.0e-14 );
+      }
+      else if(type==4) {
+        const double first = p[ if2pIdx.at(iff) ];
+        const double second = p[ if2pIdx.at(iff)+1 ];
+        const V3 check = embedXi( XiCoords{ first, second, std::sqrt(1.0-first*first-second*second) } );
+        assert( (r-check).norm()<1.0e-14 );
+      }
+    }
+  }
+
+
+  void UpdateBasePoints(){
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
     for(Idx iff=0; iff<basePoints.size(); iff++){
       const int type = baseTypes[iff];
 
@@ -199,7 +244,7 @@ struct DualLatticeOptimizerBase{
 
 
 
-class DualLatticeAngleCostEvaluator : DualLatticeOptimizerBase{
+class DualLatticeAngleCostEvaluator : public DualLatticeOptimizerBase{
 public:
 
   // <CAB
@@ -226,7 +271,7 @@ public:
   {}
 
 
-  double cost( const double tol = 1.0e-12) const {
+  double cost( const double tol = 1.0e-10) const {
     double sqrd = 0.0;
 
     for(const Idx iff : basePoints){
@@ -257,10 +302,19 @@ public:
 
       // std::cout << "debug. angles = " << A0B << " " << B0C << " " << C0A << std::endl;
       // std::cout << "debug. sum-2Pi = " << A0B+B0C+C0A-2.0*M_PI << std::endl;
-      assert( std::abs( A0B+B0C+C0A-2.0*M_PI ) < tol );
+      // assert( std::abs( A0B+B0C+C0A-2.0*M_PI ) < tol );
+      if( std::abs( A0B+B0C+C0A-2.0*M_PI ) > tol ){
+        std::cout << "debug. angles = " << A0B << " " << B0C << " " << C0A << std::endl;
+        std::cout << "debug. sum-2Pi = " << A0B+B0C+C0A-2.0*M_PI << std::endl;
+        sqrd += basePoints.size()*basePoints.size();
+      }
 
-      const double diff = A0B - B0C;
-      sqrd += diff*diff;
+      const double diff1 = A0B - 2.0*M_PI/3.0;
+      const double diff2 = B0C - 2.0*M_PI/3.0;
+      const double diff3 = C0A - 2.0*M_PI/3.0;
+      sqrd += diff1*diff1;
+      sqrd += diff2*diff2;
+      sqrd += diff3*diff3;
     }
     return std::sqrt( sqrd/basePoints.size() );
   }

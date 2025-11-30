@@ -198,7 +198,7 @@ struct FullIcosahedralGroup {
     words_tmp.push_back("u");
     elems.push_back(iu);
 
-    int counter=0;
+    Idx counter=0;
     bool flag=true;
 
     while(flag){
@@ -210,7 +210,7 @@ struct FullIcosahedralGroup {
         for(const char y : word) trsl.push_back( replace(y) );
 
         int elem = 0;
-        for(int i=0; i<trsl.size(); i++){
+        for(Idx i=0; i<trsl.size(); i++){
           elem = tab[elem][trsl[i]];
         }
 
@@ -228,7 +228,7 @@ struct FullIcosahedralGroup {
     words.clear();
     words.resize(words_tmp.size());
 
-    for(int i=0; i<elems.size(); i++){
+    for(Idx i=0; i<elems.size(); i++){
       words[elems[i]] = words_tmp[i];
     }
   }
@@ -331,7 +331,7 @@ struct Orbits {
         const M3 mg = Ih.rotation(ig, ms, mt);
         const V3 gx = mg*x;
 
-        for(int iy=0; iy<nVertices; iy++){
+        for(Idx iy=0; iy<nVertices; iy++){
           const V3 y = vertices[iy];
           if( is_identical(gx, y) ) {
             orbit.push_back(iy);
