@@ -389,7 +389,7 @@ struct RefinedIcosahedronDual {
   }
 
 
-  void shiftPA( FaceCoords& fp,
+  int shiftPA( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -404,16 +404,21 @@ struct RefinedIcosahedronDual {
     Coords np;
     simplicial.shiftPX(np, Coords{x,y,s});
 
+    int res=0;
     if(np[2]==PatchIdxS) { // rotate around SP
       assert(x==L-1);
       assert(y==0);
       fp = FaceCoords{x, y, (s+1)%(NPatches/2), XZ};
     }
-    else if(s<NPatches/2 && x==L-1) fp = FaceCoords{np[0]-1, np[1], np[2], XZ};
+    else if(s<NPatches/2 && x==L-1) {
+      fp = FaceCoords{np[0]-1, np[1], np[2], XZ};
+      res = 1;
+    }
     else fp = FaceCoords{np[0], np[1], np[2], ZY};
+    return res;
   }
 
-  void shiftMA( FaceCoords& fp,
+  int shiftMA( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -430,9 +435,10 @@ struct RefinedIcosahedronDual {
 
     if(NPatches/2<=s && x==0) fp = FaceCoords{np[0], np[1], np[2], ZY};
     else fp = FaceCoords{np[0], np[1], np[2], XZ};
+    return 0;
   }
 
-  void shiftPB( FaceCoords& fp,
+  int shiftPB( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -445,9 +451,10 @@ struct RefinedIcosahedronDual {
     assert(type==XZ);
 
     fp = FaceCoords{x, y, s, ZY};
+    return 0;
   }
 
-  void shiftMB( FaceCoords& fp,
+  int shiftMB( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -460,9 +467,10 @@ struct RefinedIcosahedronDual {
     assert(type==ZY);
 
     fp = FaceCoords{x, y, s, XZ};
+    return 0;
   }
 
-  void shiftPC( FaceCoords& fp,
+  int shiftPC( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -479,9 +487,10 @@ struct RefinedIcosahedronDual {
 
     if(s<NPatches/2 && y==0) fp = FaceCoords{np[0], np[1], np[2], XZ};
     else fp = FaceCoords{np[0], np[1], np[2], ZY};
+    return 0;
   }
 
-  void shiftMC( FaceCoords& fp,
+  int shiftMC( FaceCoords& fp,
                 const FaceCoords& f ) const {
     const int x = f[0];
     const int y = f[1];
@@ -498,15 +507,53 @@ struct RefinedIcosahedronDual {
 
     // std::cout << "n = " << x << " " << y << " " << s << std::endl;
     // std::cout << "np = " << np[0] << " " << np[1] << " " << np[2] << std::endl;
-
-    if(np[2]==PatchIdxN) { // rotate around SP
+    // std::cout << "debug. MC?" << std::endl;
+    int res = 0;
+    if(np[2]==PatchIdxN) { // rotate around NP
       assert(y==L-1);
       assert(x==0);
       fp = FaceCoords{x, y, (s+1)%(NPatches/2)+(NPatches/2), ZY};
+      res = 1;
+      // std::cout << "debug. MC1?" << std::endl;
     }
-    else if(NPatches/2<=s && y==L-1) fp = FaceCoords{np[0], np[1]-1, np[2], ZY};
-    else fp = FaceCoords{np[0], np[1], np[2], XZ};
+    else if(NPatches/2<=s && y==L-1) {
+      fp = FaceCoords{np[0], np[1]-1, np[2], ZY};
+      // std::cout << "debug. MC2?" << std::endl;
+      res = 1;
+    }
+    else {
+      fp = FaceCoords{np[0], np[1], np[2], XZ};
+      // std::cout << "debug. MC3?" << std::endl;
+    }
+    return res;
   }
+
+  const int nA=0;
+  const int nB=1;
+  const int nC=2;
+
+  int shift( FaceCoords& fp,
+              const FaceCoords& f,
+              const int df ) const {
+    const int type = f[3];
+
+    int res = 0;
+    if(type==XZ){
+      if(df==nA) res = shiftPA(fp, f);
+      else if(df==nB) res = shiftPB(fp, f);
+      else if(df==nC) res = shiftPC(fp, f);
+      else assert(false);
+    }
+    else if(type==ZY){
+      if(df==nA) res = shiftMA(fp, f);
+      else if(df==nB) res = shiftMB(fp, f);
+      else if(df==nC) res = shiftMC(fp, f);
+      else assert(false);
+    }
+    else assert(false);
+    return res;
+  }
+
 
 
   // with circumcenterdual

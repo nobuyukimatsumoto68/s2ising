@@ -142,9 +142,9 @@ struct DualLatticeOptimizerBase{
 
 
   void init(){
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(Comp::NPARALLEL)
-#endif
+// #ifdef _OPENMP
+// #pragma omp parallel for num_threads(Comp::NPARALLEL)
+// #endif
     for(Idx iff=0; iff<basePoints.size(); iff++){
       const int type = baseTypes[iff];
       const V3 r = dual.vertices[ basePoints[iff] ];
@@ -183,9 +183,9 @@ struct DualLatticeOptimizerBase{
 
 
   void CheckBasePoints(){
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(Comp::NPARALLEL)
-#endif
+// #ifdef _OPENMP
+// #pragma omp parallel for num_threads(Comp::NPARALLEL)
+// #endif
     for(Idx iff=0; iff<basePoints.size(); iff++){
       const int type = baseTypes[iff];
       const V3 r = dual.vertices[ basePoints[iff] ];
