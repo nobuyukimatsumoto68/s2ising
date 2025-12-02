@@ -507,18 +507,24 @@ struct RefinedIcosahedronDual {
 
     // std::cout << "n = " << x << " " << y << " " << s << std::endl;
     // std::cout << "np = " << np[0] << " " << np[1] << " " << np[2] << std::endl;
-
+    // std::cout << "debug. MC?" << std::endl;
     int res = 0;
-    if(np[2]==PatchIdxN) { // rotate around SP
+    if(np[2]==PatchIdxN) { // rotate around NP
       assert(y==L-1);
       assert(x==0);
       fp = FaceCoords{x, y, (s+1)%(NPatches/2)+(NPatches/2), ZY};
+      res = 1;
+      // std::cout << "debug. MC1?" << std::endl;
     }
     else if(NPatches/2<=s && y==L-1) {
       fp = FaceCoords{np[0], np[1]-1, np[2], ZY};
+      // std::cout << "debug. MC2?" << std::endl;
       res = 1;
     }
-    else fp = FaceCoords{np[0], np[1], np[2], XZ};
+    else {
+      fp = FaceCoords{np[0], np[1], np[2], XZ};
+      // std::cout << "debug. MC3?" << std::endl;
+    }
     return res;
   }
 
