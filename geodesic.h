@@ -117,13 +117,17 @@ Double _acos(const Double arg){
 V2 projectionS2( const V3& x ){
   const Double r = x.norm();
 
+  // std::cout << "debug. x(2) = " << x(2) << std::endl;
+  // std::cout << "debug. r = " << r << std::endl;
   const Double theta = _acos(x(2)/r);
+  // const Double phi = std::atan2(x(1),x(0));
   Double phi = 0.0;
   if(!isModdable(theta, _M_PI)){
     const Double arg = x(0)/(r*std::sin(theta));
     phi = _acos(arg);
     if(x(1)<0.0) phi *= -1.0;
   }
+
   return V2(theta, phi);
 }
 
@@ -286,11 +290,17 @@ void getSign(I2& sign1, I2& sign2,
   deriv1 << diff1.dot( x1.Delta0() ), dphi;
   const V3 q2 = embedding3D(projectionS2(q - eps*(q-p)));
   const V3 diff2 = q-q2;
-  // deriv2 << diff2.dot( x2.Delta0() ), diff2.dot( x2.Delta1() );
-  deriv2 << diff2.dot( x2.Delta0() ), dphi;
-  std::cout << "debug. inside getsign" << std::endl;
-  std::cout << deriv1 << std::endl;
-  std::cout << deriv2 << std::endl;
+  deriv2 << diff2.dot( x2.Delta0() ), diff2.dot( x2.Delta1() );
+  // deriv2 << diff2.dot( x2.Delta0() ), dphi;
+  // std::cout << "debug. inside getsign. xi" << std::endl;
+  // std::cout << x1.xi << std::endl;
+  // std::cout << x2.xi << std::endl;
+  // std::cout << "debug. inside getsign. Delta0" << std::endl;
+  // std::cout << x1.Delta0() << std::endl;
+  // std::cout << x2.Delta0() << std::endl;
+  // std::cout << "debug. inside getsign. deriv" << std::endl;
+  // std::cout << deriv1 << std::endl;
+  // std::cout << deriv2 << std::endl;
 
   sign1 = deriv1.array().sign().matrix().cast<int>();
   sign2 = deriv2.array().sign().matrix().cast<int>();
@@ -608,9 +618,9 @@ Sol SolveGeodesics( const Pt& x1, const Pt& x2, const bool is_verbose=true ){
 
   I2 sign1, sign2;
   getSign( sign1, sign2, x1, x2 );
-  std::cout << "debug. sign pt1. "
-            << sign1.transpose() << " "
-            << sign2.transpose() << std::endl;
+  // std::cout << "debug. sign pt1. "
+  //           << sign1.transpose() << " "
+  //           << sign2.transpose() << std::endl;
   if(sign1(0)==sign2(0)){
     if(is_verbose) std::cout << "monotonic" << std::endl;
     return SolveGeodesicsMonotonic( x1, x2 );
