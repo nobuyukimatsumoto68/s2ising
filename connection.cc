@@ -111,11 +111,11 @@ int main(int argc, char* argv[]){
       // std::cout << "alpha(0) = " << alpha_1 << std::endl;
       // std::cout << "alpha(1) = " << alpha_2 << std::endl;
 
-      const double alpha1 = spin.alphas[ spin.idx(if1, df) ];
-      const double alpha2 = spin.alphas[ spin.idx(if2, df) ];
+      const double alpha1 = spin.alphas[ dual.linkidx(if1, df) ];
+      const double alpha2 = spin.alphas[ dual.linkidx(if2, df) ];
 
       // std::cout << "d alpha(1) = " << M_PI + alpha_2 - alpha2 << std::endl;
-      const double omega12 = spin.omegas[ spin.idx(if1, df) ];
+      const double omega12 = spin.omegas[ dual.linkidx(if1, df) ];
 
       // std::cout << "alpha1 = " << alpha1 << std::endl;
       // std::cout << "alpha2 = " << alpha2 << std::endl;
@@ -171,7 +171,7 @@ int main(int argc, char* argv[]){
     // std::cout << "length = " << face.size() << std::endl;
     double omega_sum = 0.0;
     for(auto elem : face) {
-      omega_sum += spin.omegas[ spin.idx( elem.first, elem.second ) ];
+      omega_sum += spin.omegas[ dual.linkidx( elem.first, elem.second ) ];
     }
     while(omega_sum>2.0*M_PI) omega_sum -= 4.0*M_PI;
     while(omega_sum<=-2.0*M_PI) omega_sum += 4.0*M_PI;

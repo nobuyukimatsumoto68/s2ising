@@ -109,11 +109,15 @@ struct DualSpinStructure {
   std::vector<double> alphas;
   std::vector<double> omegas;
 
+  const double TOL;
   const double phi0;
 
   DualSpinStructure(const RefinedIcosahedronDual& dual_,
-                    const double phi0_=M_PI/48.0)
+                    const double TOL_=1.0e-12, // okay up to L~160
+                    const double phi0_=M_PI/48.0
+                    )
     : dual( dual_ )
+    , TOL(TOL_)
     , phi0(phi0_)
   {
     for(const V3& r : dual.vertices){
@@ -123,20 +127,21 @@ struct DualSpinStructure {
 
     FillAlphas();
     FillOmegas();
+    check_omega();
   }
 
-  inline Idx idx( const Idx iff, const int df ) const {
-    return 3*iff + df;
-  }
+  void check_omega() const {
+    for(Idx i=0; i<dual.simplicial.NVertices(); i++){
+      const DualFace face = dual.faces[i];
+      double omega_sum = 0.0;
+      for(auto elem : face) {
+        omega_sum += omegas[ dual.linkidx( elem.first, elem.second ) ];
+      }
+      while(omega_sum>2.0*M_PI) omega_sum -= 4.0*M_PI;
+      while(omega_sum<=-2.0*M_PI) omega_sum += 4.0*M_PI;
 
-  inline Idx idx( const DirectedLink& ell ) const {
-    return idx(ell.first, ell.second);
-  }
-
-  DirectedLink idx2DirectedLink( const Idx il ) const {
-    const int df = il%3;
-    const Idx iff = il/3;
-    return std::make_pair(iff, df);
+      assert( std::abs(omega_sum+dual.vols[i])<TOL );
+    }
   }
 
   // DirectedLink idx2DirectedLinkReverse( const Idx il ) const {
@@ -150,13 +155,9 @@ struct DualSpinStructure {
   //   return std::make_pair(dual.idx(f2), df);
   // }
 
-  inline Idx NDirectedLinks() const {
-    return 3*dual.NVertices();
-  }
-
   void FillAlphas(){
     alphas.clear();
-    alphas.resize( NDirectedLinks() );
+    alphas.resize( dual.NDirectedLinks() );
 
     for(Idx if1=0; if1<dual.NVertices(); if1++){
       const FaceCoords f1 = dual.idx2FaceCoords(if1); //{ n[0],n[1],n[2],type };
@@ -168,23 +169,23 @@ struct DualSpinStructure {
         const Idx if2 = dual.idx( f2 );
         const V3 rf2 = dual.vertices[if2];
 
-        alphas[idx(if1, df)] = alpha( rf1, rf2, 0.0 );
+        alphas[dual.linkidx(if1, df)] = alpha( rf1, rf2, 0.0 );
       }
     }
   }
 
 
 
-  const int limit = 4000; // 1000;
-  double epsabs = 1.0e-13; // 0.;
+  const int limit = 5000; // 1000;
+  double epsabs = 1.0e-15; // 0.;
   double epsrel = 1.0e-13; // TOLLOOSE;
-  int key = 5;
+  int key = 6;
 
 
 
   void FillOmegas(){
     omegas.clear();
-    omegas.resize( NDirectedLinks() );
+    omegas.resize( dual.NDirectedLinks() );
 
     for(Idx if1=0; if1<dual.NVertices(); if1++){
       const FaceCoords f1 = dual.idx2FaceCoords(if1); //{ n[0],n[1],n[2],type };
@@ -226,7 +227,7 @@ struct DualSpinStructure {
           // std::cout << "debug. diff = " << diff << std::endl;
           if(diff>M_PI) diff -= 2.0*M_PI;
           else if(diff<=-M_PI) diff += 2.0*M_PI;
-          assert( std::abs(diff)<1.0e-14 );
+          assert( std::abs(diff)<TOL );
         }
 
         const double phi1 = phi(rf1);
@@ -244,7 +245,7 @@ struct DualSpinStructure {
         else if(dphi < -M_PI) dphi += 2.0*M_PI;
         if( std::abs(dphi1) + std::abs(dphi2) - std::abs(dphi) < 1.0e-14 ) omega12 -= 2.0*M_PI;
 
-        omegas[idx(if1, df)] = omega12;
+        omegas[dual.linkidx(if1, df)] = omega12;
       }
     }
   }

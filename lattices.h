@@ -39,6 +39,14 @@ double arcLength( const V3& rA, const V3& rB ){
   return std::acos(AB);
 }
 
+double sphericalarea( const V3& x1, const V3& x2, const V3& x3 ){
+  double a = arcLength( x2, x3 );
+  double b = arcLength( x3, x1 );
+  double c = arcLength( x1, x2 );
+  double s = 0.5*(a+b+c);
+  double tantan = std::tan(0.5*s) * std::tan(0.5*(s-a)) * std::tan(0.5*(s-b)) * std::tan(0.5*(s-c));
+  return 4.0*std::atan(std::sqrt(tantan));
+}
 
 
 
@@ -376,6 +384,15 @@ struct RefinedIcosahedronDual {
   const int nB=1;
   const int nC=2;
 
+  std::vector<double> ells;
+  std::vector<double> link_volumes;
+
+  double mean_ell;
+  double mean_link_volume;
+  double mean_dual_area;
+
+  std::vector<double> vols; // hex vol
+  double mean_vol;
 
   RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
     : simplicial(simplicial_)
@@ -386,6 +403,8 @@ struct RefinedIcosahedronDual {
     assert(vertices.size()==2*Nx);
     GetBasePoints();
     FillFaces();
+    set_ell_link_volume();
+    set_vol();
   }
 
   Idx NVertices() const { return simplicial.NFaces(); }
@@ -641,6 +660,25 @@ struct RefinedIcosahedronDual {
         }}}
   }
 
+
+  inline Idx linkidx( const Idx iff, const int df ) const {
+    return 3*iff + df;
+  }
+
+  inline Idx linkidx( const DirectedLink& ell ) const {
+    return linkidx(ell.first, ell.second);
+  }
+
+  DirectedLink linkidx2DirectedLink( const Idx il ) const {
+    const int df = il%3;
+    const Idx iff = il/3;
+    return std::make_pair(iff, df);
+  }
+
+  inline Idx NDirectedLinks() const {
+    return 3*NVertices();
+  }
+
   void FillFaces(){
     for(Idx if1=0; if1<NVertices(); if1++){
       const FaceCoords f1 = idx2FaceCoords(if1);
@@ -715,8 +753,123 @@ struct RefinedIcosahedronDual {
       }
       faces.push_back(face);
     }
-
   }
+
+  void dual_simp_link( Coords& pA,
+                       Coords& pB,
+                       const FaceCoords& f1,
+                       const int df
+                       ) const {
+    const Coords base{ f1[0], f1[1], f1[2] };
+    if(f1[3]==XZ){
+      if(df==nA){
+        simplicial.shiftPX( pA, base );
+        simplicial.shiftPZ( pB, base );
+      }
+      else if(df==nB){
+        simplicial.shiftPZ( pA, base );
+        pB = base;
+      }
+      else if(df==nC){
+        pA = base;
+        simplicial.shiftPX( pB, base );
+      }
+      else assert(false);
+    }
+    else if(f1[3]==ZY){
+      if(df==nA){
+        simplicial.shiftPY( pA, base );
+        pB = base;
+      }
+      else if(df==nB){
+        pA = base;
+        simplicial.shiftPZ( pB, base );
+      }
+      else if(df==nC){
+        simplicial.shiftPZ( pA, base );
+        simplicial.shiftPY( pB, base );
+      }
+      else assert(false);
+    }
+    else assert(false);
+  }
+
+
+  void set_ell_link_volume(){
+    ells.resize( NDirectedLinks() );
+    link_volumes.resize( NDirectedLinks() );
+
+    for(Idx il=0; il<NDirectedLinks(); il++){
+      const DirectedLink ell = linkidx2DirectedLink(il);
+      const Idx if1 = ell.first;
+      const FaceCoords f1 = idx2FaceCoords( if1 );
+      const int df = ell.second;
+
+      FaceCoords f2;
+      shift( f2, f1, df);
+      const Idx if2 = idx(f2);
+
+      Coords pA, pB;
+      dual_simp_link(pA, pB, f1, df);
+      const Idx iA = simplicial.idx(pA);
+      const Idx iB = simplicial.idx(pB);
+
+      const V3 x = vertices[if1];
+      const V3 y = vertices[if2];
+      ells[il] = arcLength(x,y);
+
+      const double areaA = sphericalarea(simplicial.vertices[iA],x,y);
+      const double areaB = sphericalarea(simplicial.vertices[iB],x,y);
+      link_volumes[il] = (areaA + areaB);
+    }
+
+    mean_link_volume = 0.0;
+    for(const double elem : link_volumes) {
+      // std::cout << "debug. elem = " << elem << std::endl;
+      mean_link_volume+=elem;
+    }
+    // std::cout << "debug. diff = " << mean_link_volume-8.0*M_PI << std::endl;
+    assert( std::abs(mean_link_volume-8.0*M_PI)/std::sqrt(link_volumes.size())<1.0e-12 ); // double count
+    mean_link_volume /= link_volumes.size();
+
+    mean_ell = 0.0;
+    for(const double elem : ells) mean_ell+=elem;
+    mean_ell /= ells.size();
+  }
+
+
+  void set_vol(){
+    vols.clear();
+    assert( faces.size()==simplicial.NVertices() );
+    for(Idx i=0; i<simplicial.NVertices(); i++){
+      const V3 p = simplicial.vertices[i];
+
+      const DualFace face = faces[i];
+      double area = 0.0;
+      for(const DirectedLink& link : face){
+        const Idx if1 = link.first;
+        const FaceCoords f1 = idx2FaceCoords( if1 );
+        const V3 rf1 = vertices[if1];
+
+        const int df = link.second;
+        FaceCoords f2;
+        shift( f2, f1, df);
+        const Idx if2 = idx(f2);
+        const V3 rf2 = vertices[if2];
+
+        area += sphericalarea( p, rf1, rf2 );
+      }
+      vols.push_back( area );
+    }
+    mean_vol = 0.0;
+    for(const double elem : vols) {
+      // std::cout << "debug. elem = " << elem << std::endl;
+      mean_vol+=elem;
+    }
+    assert( std::abs(mean_vol-4.0*M_PI)/std::sqrt(link_volumes.size())<1.0e-12 );
+    mean_vol /= vols.size();
+  }
+
 
 
 
