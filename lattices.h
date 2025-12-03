@@ -14,6 +14,12 @@ using BasePoints = std::vector<Idx>;
 using BaseTypes = std::vector<int>;
 
 
+#include<utility>
+using DirectedLink=std::pair<Idx,int>;
+using DualFace=std::vector<DirectedLink>;
+
+
+
 inline V3 project( const V3& x ) { return x/x.norm(); }
 
 V3 circumcenter(const V3& r0, const V3& r1, const V3& r2){
@@ -352,6 +358,8 @@ struct RefinedIcosahedron : Icosahedron{
 };
 
 
+
+
 struct RefinedIcosahedronDual {
   const RefinedIcosahedron& simplicial;
   const int L;
@@ -362,6 +370,13 @@ struct RefinedIcosahedronDual {
   BasePoints basePoints;
   BaseTypes baseTypes;
 
+  std::vector<DualFace> faces;
+
+  const int nA=0;
+  const int nB=1;
+  const int nC=2;
+
+
   RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
     : simplicial(simplicial_)
     , L(simplicial.L)
@@ -370,6 +385,7 @@ struct RefinedIcosahedronDual {
     FillPointsCircumCenterDual();
     assert(vertices.size()==2*Nx);
     GetBasePoints();
+    FillFaces();
   }
 
   Idx NVertices() const { return simplicial.NFaces(); }
@@ -505,32 +521,23 @@ struct RefinedIcosahedronDual {
     Coords np;
     simplicial.shiftPY(np, Coords{x,y,s});
 
-    // std::cout << "n = " << x << " " << y << " " << s << std::endl;
-    // std::cout << "np = " << np[0] << " " << np[1] << " " << np[2] << std::endl;
-    // std::cout << "debug. MC?" << std::endl;
     int res = 0;
     if(np[2]==PatchIdxN) { // rotate around NP
       assert(y==L-1);
       assert(x==0);
       fp = FaceCoords{x, y, (s+1)%(NPatches/2)+(NPatches/2), ZY};
       res = 1;
-      // std::cout << "debug. MC1?" << std::endl;
     }
     else if(NPatches/2<=s && y==L-1) {
       fp = FaceCoords{np[0], np[1]-1, np[2], ZY};
-      // std::cout << "debug. MC2?" << std::endl;
       res = 1;
     }
     else {
       fp = FaceCoords{np[0], np[1], np[2], XZ};
-      // std::cout << "debug. MC3?" << std::endl;
     }
     return res;
   }
 
-  const int nA=0;
-  const int nB=1;
-  const int nC=2;
 
   int shift( FaceCoords& fp,
               const FaceCoords& f,
@@ -633,6 +640,84 @@ struct RefinedIcosahedronDual {
           }
         }}}
   }
+
+  void FillFaces(){
+    for(Idx if1=0; if1<NVertices(); if1++){
+      const FaceCoords f1 = idx2FaceCoords(if1);
+      if(f1[3]!=XZ) continue;
+
+      DualFace face;
+      FaceCoords f2 = f1;
+
+      bool is_south = (f1[2]<5);
+
+      int df = nC;
+      face.push_back(std::make_pair(if1,df));
+
+      int type_tmp = f2[3];
+      int is_shift = shift( f2, f1, df );
+      Idx if2 = idx(f2);
+
+      int counter;
+      for(counter=0; counter<6; counter++){
+        // df to next point
+        if(is_south){
+          if( f2[3] != type_tmp ) df = (df+1)%3; // C->A, A->B, B->C
+          else if( is_shift==1 ) df = df;
+          else df = (df+2)%3;
+        }
+        else{
+          if( f2[3] != type_tmp ) {
+            df = (df+1)%3; // C->A, A->B, B->C
+          }
+          else if( is_shift==1 ) {
+            df = (df+2)%3;
+          }
+          else {
+            df = df;
+          }
+        }
+        face.push_back(std::make_pair(if2,df));
+
+        type_tmp = f2[3];
+        FaceCoords f3;
+        is_shift = shift( f3, f2, df );
+        f2 = f3;
+        if2 = idx(f2);
+
+        if(if2==if1) break;
+      } // end for
+      if(counter==6){
+        assert(false);
+      }
+      faces.push_back(face);
+    }
+
+    // south pole
+    {
+      DualFace face;
+      for(int s=0; s<NPatches/2; s++){
+        const FaceCoords f1{L-1, 0, s, XZ};
+        const Idx if1 = idx(f1);
+        const int df = nA;
+        face.push_back(std::make_pair(if1,df));
+      }
+      faces.push_back(face);
+    }
+    // north pole
+    {
+      DualFace face;
+      for(int s=NPatches/2; s<NPatches; s++){
+        const FaceCoords f1{0, L-1, s, ZY};
+        const Idx if1 = idx(f1);
+        const int df = nA;
+        face.push_back(std::make_pair(if1,df));
+      }
+      faces.push_back(face);
+    }
+
+  }
+
 
 
 };

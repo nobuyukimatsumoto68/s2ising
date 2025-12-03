@@ -71,7 +71,6 @@ int main(int argc, char* argv[]){
   //   0.0, 1.0, 0.0,
   //   -std::sin(tht), 0.0, std::cos(tht);
 
-
   DualSpinStructure spin(dual);
 
   // V3 r1,r2;
@@ -168,7 +167,7 @@ int main(int argc, char* argv[]){
 
 
   std::cout << "faces = " << std::endl;
-  for(auto& face : spin.faces){
+  for(auto& face : dual.faces){
     // std::cout << "length = " << face.size() << std::endl;
     double omega_sum = 0.0;
     for(auto elem : face) {
