@@ -15,6 +15,7 @@ using BaseTypes = std::vector<int>;
 
 
 #include<utility>
+using Link=std::pair<Idx,Idx>;
 using DirectedLink=std::pair<Idx,int>;
 using DualFace=std::vector<DirectedLink>;
 
@@ -70,6 +71,7 @@ double squaredNorm ( const Vertices& r ){
 }
 
 
+#include <set>
 
 struct RefinedIcosahedron : Icosahedron{
   const int L;
@@ -93,6 +95,20 @@ struct RefinedIcosahedron : Icosahedron{
   Idx NLinks() const { return 30*L*L; }
   Idx NFaces() const { return 20*L*L; }
 
+  std::vector<std::set<Idx>> nns;
+
+  void set_nns(){
+    for(Idx in=0; in<NVertices(); in++){
+      std::set<Idx> nn;
+      const Coords n = idx2Coords(in);
+      Coords np;
+      for(int mu=0; mu<6; mu++) {
+        shift( np, n, mu );
+        if(np[2]!=PatchIdxVoid) nn.insert(idx(np));
+      }
+    }
+  }
+
   std::string print() const {
     std::stringstream ss;
     Idx counter=0;
@@ -111,6 +127,7 @@ struct RefinedIcosahedron : Icosahedron{
   Idx idxN() const { return 10*L*L + 1; }
 
   Idx idx( const int xl0, const int xl1, const int s ) const {
+    assert(s!=PatchIdxVoid);
     if(s==PatchIdxS) return idxS();
     else if(s==PatchIdxN) return idxN();
     else{
@@ -192,17 +209,28 @@ struct RefinedIcosahedron : Icosahedron{
     vertices[idxN()] = icos[NIcosVertices-1];
   }
 
-  // only defined for regular points
-  void shiftPX( Coords& np,
-                const Coords& n ) const {
+
+  int shiftPX( Coords& np,
+               const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // std::cout << "debug. s = " << s << std::endl;
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ L-1,0,0 };
+      return 0;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,L-1,5 };
+      return 1;
+    }
 
+    int res = 0;
     if(x==L-1){ // steps over the patch bdy
+      // res = +1;
       if(s<NPatches/2){ // southern hemisphere
         if(y==0) np = Coords{-1, -1, PatchIdxS};
         else np = Coords{L-y, 0, (s+1)%(NPatches/2)};
@@ -210,36 +238,69 @@ struct RefinedIcosahedron : Icosahedron{
       else np = Coords{0, y, (s-4)%(NPatches/2)}; // northern hemisphere
     }
     else np = Coords{x+1, y, s}; // within patch
+    return res;
   }
 
   // only defined for regular points
-  void shiftMX( Coords& np,
+  int shiftMX( Coords& np,
                 const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // assert(0<=s && s<NPatches);
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ L-1,0,3 };
+      return 0;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,L-1,8 };
+      return 1;
+    }
 
+
+    int res = 0;
     if(x==0){ // steps over the patch bdy
-      if(s<NPatches/2) np = Coords{L-1, y, (s+4)%(NPatches/2)+NPatches/2}; // southern hemisphere
-      else np = Coords{L-1-y, L-1, (s-1)%(NPatches/2)+NPatches/2}; // northern hemisphere
+      // res = 0;
+      if(s<NPatches/2) {
+        // std::cout << "debug mx s." << std::endl; // used
+        np = Coords{L-1, y, (s+4)%(NPatches/2)+NPatches/2}; // southern hemisphere
+      }
+      else {
+        // std::cout << "debug mx n." << std::endl; // used
+        res = 2;
+        np = Coords{L-1-y, L-1, (s-1)%(NPatches/2)+NPatches/2}; // northern hemisphere
+      }
     }
     else np = Coords{x-1, y, s}; // within patch
+    return res;
   }
 
   // only defined for regular points
-  void shiftPY( Coords& np,
+  int shiftPY( Coords& np,
                 const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // assert(0<=s && s<NPatches);
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ L-1,0,1 };
+      return 2;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,L-1,6 };
+      return 0;
+    }
 
+
+    int res = 0;
     if(y==L-1) { // steps over the patch bdy
+      // res = +1;
       if(s<NPatches/2) np = Coords{x, 0, s+5}; // southern hemisphere
       else { // northern hemisphere
         if(x==0) np = Coords{-1, -1, PatchIdxN};
@@ -247,37 +308,69 @@ struct RefinedIcosahedron : Icosahedron{
       }
     }
     else np = Coords{x, y+1, s}; // within patch
+    return res;
   }
 
   // only defined for regular points
-  void shiftMY( Coords& np,
+  int shiftMY( Coords& np,
                 const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // assert(0<=s && s<NPatches);
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ L-1,0,4 };
+      return 2;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,L-1,9 };
+      return 0;
+    }
 
+
+    int res = 0;
     if(y==0){ // steps over the patch bdy
-      if(s<NPatches/2) np = Coords{L-1, L-1-x, (s-1+NPatches/2)%(NPatches/2)}; // southern hemisphere
-      else np = Coords{x, L-1, (s-5)%(NPatches/2)}; // northern hemisphere
+      res = +1;
+      if(s<NPatches/2) {
+        // std::cout << "debug my s." << std::endl; // used
+        np = Coords{L-1, L-1-x, (s-1+NPatches/2)%(NPatches/2)}; // southern hemisphere
+      }
+      else {
+        // std::cout << "debug my n." << std::endl; // used
+        np = Coords{x, L-1, (s-5)%(NPatches/2)}; // northern hemisphere
+      }
     }
     else np = Coords{x, y-1, s}; // within patch
+    return res;
   }
 
 
   // only defined for regular points
-  void shiftPZ( Coords& np,
+  int shiftPZ( Coords& np,
                 const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // assert(0<=s && s<NPatches);
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ L-1,0,2 };
+      return 1;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,L-1,7 };
+      return 2;
+    }
 
+
+    int res = 0;
     if(s<NPatches/2){ // southern hemisphere
+      // res = 1;
       if(x==L-1) np = Coords{L-1-y, 0, (s+1)%(NPatches/2)};
       else if(y==L-1) np = Coords{x+1, 0, s+5};
       else np = Coords{x+1, y+1, s};
@@ -287,34 +380,91 @@ struct RefinedIcosahedron : Icosahedron{
       else if(x==L-1) np = Coords{0, y+1, (s-4)%(NPatches/2)};
       else np = Coords{x+1, y+1, s};
     }
+    return res;
   }
 
   // only defined for regular points
-  void shiftMZ( Coords& np,
+  int shiftMZ( Coords& np,
                 const Coords& n ) const {
     const int x = n[0];
     const int y = n[1];
     const int s = n[2];
     assert(0<=x && x<L);
     assert(0<=y && y<L);
-    assert(0<=s && s<NPatches);
+    // assert(0<=s && s<NPatches);
+    assert(0<=s && s<PatchIdxVoid);
+    if(s==PatchIdxS) {
+      np = Coords{ 0,0,PatchIdxVoid };
+      return 0;
+    }
+    if(s==PatchIdxN) {
+      np = Coords{ 0,0,PatchIdxVoid };
+      return 0;
+    }
 
+
+    int res = 0;
     if(s<NPatches/2){ // southern hemisphere
       if(x==0) {
-        if(y==0) np = Coords{0, 0, PatchIdxVoid};
-        else np = Coords{L-1, y-1, (s+4)%(NPatches/2)+NPatches/2};
+        // res = 2;
+        if(y==0) {
+          // std::cout << "debug mz s1." << std::endl; // used
+          res += 1;
+          np = Coords{0, 0, PatchIdxVoid};
+        }
+        else {
+          // std::cout << "debug mz s2." << std::endl; // used
+          np = Coords{L-1, y-1, (s+4)%(NPatches/2)+NPatches/2};
+        }
       }
-      else if(y==0) np = Coords{L-1, L-x, (s-1+NPatches/2)%(NPatches/2)};
+      else if(y==0) {
+        // std::cout << "debug mz s3." << std::endl; // used
+        res += 1;
+        np = Coords{L-1, L-x, (s-1+NPatches/2)%(NPatches/2)};
+      }
       else np = Coords{x-1, y-1, s};
     }
     else { // northern hemisphere
       if(x==0) {
-        if(y==0) np = Coords{0, 0, PatchIdxVoid};
-        else np = Coords{L-y, L-1, (s-1)%(NPatches/2)+NPatches/2};
+        // res = 2;
+        if(y==0) {
+          // std::cout << "debug mz n1." << std::endl; // used
+          res += 1;
+          np = Coords{0, 0, PatchIdxVoid};
+        }
+        else {
+          // std::cout << "debug mz n2." << std::endl;
+          np = Coords{L-y, L-1, (s-1)%(NPatches/2)+NPatches/2};
+        }
       }
-      else if(y==0) np = Coords{x-1, L-1, (s-5+NPatches/2)%(NPatches/2)};
+      else if(y==0) {
+        // std::cout << "debug mz n3." << std::endl;
+        res += 1;
+        np = Coords{x-1, L-1, (s-5+NPatches/2)%(NPatches/2)};
+      }
       else np = Coords{x-1, y-1, s};
     }
+    return res;
+  }
+
+  const int nX=0;
+  const int nY=1;
+  const int nZ=2;
+
+  int shift( Coords& np,
+             const Coords& n,
+             const int dn ) const {
+    assert(0<=dn && dn<6);
+
+    int res;
+    if(dn==nX) res = shiftPX(np, n);
+    else if(dn==nY) res = shiftPY(np, n);
+    else if(dn==nZ) res = shiftPZ(np, n);
+    else if(dn==nX+3) res = shiftMX(np, n);
+    else if(dn==nY+3) res = shiftMY(np, n);
+    else if(dn==nZ+3) res = shiftMZ(np, n);
+    else assert(false);
+    return res;
   }
 
 
@@ -403,6 +553,7 @@ struct RefinedIcosahedronDual {
     assert(vertices.size()==2*Nx);
     GetBasePoints();
     FillFaces();
+    FillDualLinks();
     set_ell_link_volume();
     set_vol();
   }
@@ -754,6 +905,105 @@ struct RefinedIcosahedronDual {
       faces.push_back(face);
     }
   }
+
+
+  std::map<const DirectedLink, const DirectedLink> linkSimp2Dual;
+
+  void FillDualLinks(){
+    linkSimp2Dual.clear();
+    for(Idx in=0; in<simplicial.NVertices(); in++){
+      const Coords n = simplicial.idx2Coords(in);
+      const DualFace& face = faces[in];
+      auto pf = face.begin();
+      if(face.size()==6){
+        // x=0
+        linkSimp2Dual.insert( { DirectedLink{in,0}, *pf } ); pf++;
+        // -y=4
+        linkSimp2Dual.insert( { DirectedLink{in,4}, *pf } ); pf++;
+        // -z=5
+        linkSimp2Dual.insert( { DirectedLink{in,5}, *pf } ); pf++;
+        // -x=3
+        linkSimp2Dual.insert( { DirectedLink{in,3}, *pf } ); pf++;
+        // y=1
+        linkSimp2Dual.insert( { DirectedLink{in,1}, *pf } ); pf++;
+        // z=2
+        linkSimp2Dual.insert( { DirectedLink{in,2}, *pf } ); pf++;
+      }
+      else{
+        // x=0
+        linkSimp2Dual.insert( { DirectedLink{in,0}, *pf } ); pf++;
+        // -y=4
+        linkSimp2Dual.insert( { DirectedLink{in,4}, *pf } ); pf++;
+        // // -z=5
+        // linkSimp2Dual.insert( { DirectedLink{in,5}, *pf } ); pf++;
+        // -x=3
+        linkSimp2Dual.insert( { DirectedLink{in,3}, *pf } ); pf++;
+        // y=1
+        linkSimp2Dual.insert( { DirectedLink{in,1}, *pf } ); pf++;
+        // z=2
+        linkSimp2Dual.insert( { DirectedLink{in,2}, *pf } ); pf++;
+      }
+      // else assert(false);
+    }
+  }
+
+  // void get_dual_link( FaceCoords& fA,
+  //                     FaceCoords& fB,
+  //                     const Coords n_,
+  //                     const int mu_ ) const {
+
+  //   Coords n;
+  //   int mu;
+  //   if(n_[2]==PatchIdxS){
+  //     n = Coords{L-1,0,mu_};
+  //     mu = 0;
+  //   }
+  //   else if(n_[2]==PatchIdxN){
+  //     n = Coords{0,L-1,mu_+5};
+  //     mu = 1;
+  //   }
+  //   else if(0<=mu_ && mu_<3){
+  //     n=n_;
+  //     mu = mu_;
+  //   }
+  //   else if(3<=mu_ && mu_<6){
+  //     int dn = simplicial.shift(n, n_, mu_);
+  //     // std::cout << "debug. " << dn << std::endl;
+  //     if(n_[2]>=5) dn=4-dn; // @@@
+  //     mu = (mu_+dn)%3;
+  //   }
+  //   else assert(false);
+
+  //   if(mu==simplicial.nX) {
+  //     fA = FaceCoords{n[0], n[1], n[2], XZ};
+  //     shiftPC(fB, fA);
+  //   }
+  //   else if(mu==simplicial.nY) {
+  //     fB = FaceCoords{n[0], n[1], n[2], ZY};
+  //     shiftMA(fA, fB);
+  //   }
+  //   else if(mu==simplicial.nZ) {
+  //     fA = FaceCoords{n[0], n[1], n[2], ZY};
+  //     fB = FaceCoords{n[0], n[1], n[2], XZ};
+  //   }
+  //   // else if(mu==simplicial.nX+3) {
+  //   //   fA = FaceCoords{n[0], n[1], n[2], XZ};
+  //   //   shiftPC(fB, fA);
+  //   // }
+  //   // else if(mu==simplicial.nY+3) {
+  //   //   fB = FaceCoords{n[0], n[1], n[2], ZY};
+  //   //   shiftMA(fA, fB);
+  //   // }
+  //   // else if(mu==simplicial.nZ+3) {
+  //   //   fA = FaceCoords{n[0], n[1], n[2], ZY};
+  //   //   fB = FaceCoords{n[0], n[1], n[2], XZ};
+  //   // }
+  //   else {
+  //     // std::cout << "debug. mu_ = " << mu_ << std::endl;
+  //     std::cout << "debug. mu = " << mu << std::endl;
+  //     assert( false );
+  //   }
+  // }
 
   void dual_simp_link( Coords& pA,
                        Coords& pB,

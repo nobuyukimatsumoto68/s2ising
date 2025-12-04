@@ -166,38 +166,38 @@ int main(int argc, char* argv[]){
           sols.push_back( sol );
     }}
 
-  // {
-  //   const Double phi0 = _M_PI/48.0;
-  //   for(const auto& site : sites) assert( std::abs(Mod(Pt(site).xi[1]) - phi0)>TOLLOOSE );
-  //   std::vector<Idx> section;
-  //   for(Idx il=0; il<links.size(); il++){
-  //     Link link = links[il];
-  //     const Double phi1 = Pt(sites[link[0]]).xi[1];
-  //     const Double phi2 = Pt(sites[link[1]]).xi[1];
-  //     Double dphi1 = phi1-phi0;
-  //     Double dphi2 = phi2-phi0;
-  //     Double dphi = phi1-phi2;
+  {
+    const Double phi0 = _M_PI/48.0;
+    for(const auto& site : sites) assert( std::abs(Mod(Pt(site).xi[1]) - phi0)>TOLLOOSE );
+    std::vector<Idx> section;
+    for(Idx il=0; il<links.size(); il++){
+      Link link = links[il];
+      const Double phi1 = Pt(sites[link[0]]).xi[1];
+      const Double phi2 = Pt(sites[link[1]]).xi[1];
+      Double dphi1 = phi1-phi0;
+      Double dphi2 = phi2-phi0;
+      Double dphi = phi1-phi2;
 
-  //     if(dphi1 >= _M_PI) dphi1 -= 2.0*_M_PI;
-  //     else if(dphi1 < -_M_PI) dphi1 += 2.0*_M_PI;
-  //     if(dphi2 >= _M_PI) dphi2 -= 2.0*_M_PI;
-  //     else if(dphi2 < -_M_PI) dphi2 += 2.0*_M_PI;
-  //     if(dphi >= _M_PI) dphi -= 2.0*_M_PI;
-  //     else if(dphi < -_M_PI) dphi += 2.0*_M_PI;
+      if(dphi1 >= _M_PI) dphi1 -= 2.0*_M_PI;
+      else if(dphi1 < -_M_PI) dphi1 += 2.0*_M_PI;
+      if(dphi2 >= _M_PI) dphi2 -= 2.0*_M_PI;
+      else if(dphi2 < -_M_PI) dphi2 += 2.0*_M_PI;
+      if(dphi >= _M_PI) dphi -= 2.0*_M_PI;
+      else if(dphi < -_M_PI) dphi += 2.0*_M_PI;
 
-  //     if( std::abs(dphi1) + std::abs(dphi2) - std::abs(dphi) < TOLLOOSE ){
-  //       section.push_back( il );
-  //     }
-  //   }
-  //   for(Idx il : section) omegas[il] -= 2.0*_M_PI;
-  // }
+      if( std::abs(dphi1) + std::abs(dphi2) - std::abs(dphi) < TOLLOOSE ){
+        section.push_back( il );
+      }
+    }
+    for(Idx il : section) omegas[il] -= 2.0*_M_PI;
+  }
 
-  // std::map<const Link, Double> omega;
-  // for(Idx il=0; il<links.size(); il++){
-  //   Link link = links[il];
-  //   omega.insert( { link, omegas[il] } );
-  //   omega.insert( { Link{link[1], link[0]}, -omegas[il] } );
-  // }
+  std::map<const Link, Double> omega;
+  for(Idx il=0; il<links.size(); il++){
+    Link link = links[il];
+    omega.insert( { link, omegas[il] } );
+    omega.insert( { Link{link[1], link[0]}, -omegas[il] } );
+  }
 
 
   // std::vector<Double> alpha0s, alpha1s;
