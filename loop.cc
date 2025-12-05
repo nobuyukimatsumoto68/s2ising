@@ -53,9 +53,6 @@ int main(int argc, char* argv[]){
   std::clog << std::scientific << std::setprecision(25);
 
   // --------------------
-  // const int L = 16;
-  // const int L = 32;
-  // const int L = 48;
   int k=3;
   if(argc>=2) k = atoi(argv[1]);
   int r=0;
@@ -66,6 +63,11 @@ int main(int argc, char* argv[]){
   FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
   Rotation rot;
   RefinedIcosahedronDual dual(lattice);
+
+  // std::cout << "len = " << arcLength( lattice.vertices[0], lattice.vertices[1] ) << std::endl;
+  // std::cout << "len = " << arcLength( dual.vertices[0], dual.vertices[1] ) << std::endl;
+  // std::cout << "len = " << arcLength( dual.vertices[0], dual.vertices[2] ) << std::endl;
+  // std::cout << "len = " << arcLength( dual.vertices[0], dual.vertices[3] ) << std::endl;
 
   // std::cout << "faces = " << std::endl;
   // for(auto& face : dual.faces){
@@ -85,8 +87,8 @@ int main(int argc, char* argv[]){
 
   DualSpinStructure spin(dual);
 
+  // DualLoopUtils loops;
   {
-    DualLoopUtils loops;
     Idx q = std::pow(2, k) + r; // Binary: 00100101
 
     SimpConfig c( q );
@@ -139,6 +141,58 @@ int main(int argc, char* argv[]){
     std::cout << "links_in_loops = " << std::endl;
     for(auto elem : links_in_loops) std::cout << elem.first << " " << elem.second << std::endl;
     std::cout << std::endl;
+
+    // std::set<Idx> sites_in_loops;
+    // for(auto elem : links_in_loops) {
+    //   sites_in_loops.insert(elem.first);
+    //   sites_in_loops.insert(elem.second);
+    // }
+
+    // group links
+    using Loop = std::vector<Idx>; //  link;
+    std::vector<Loop> loops;
+
+
+    while(links_in_loops.size()!=0){
+      // initialize a loop
+      Loop loop;
+      const Link ell = *links_in_loops.begin();
+      const Idx if_end = ell.first, if_init = ell.second;
+
+      // retrieve a loop starting from if_init; coming back to if_end
+      Idx if_current = if_init;
+      loop.push_back(if_current);
+
+      while(*std::prev(loop.end())!=if_end){
+        for(auto em=std::next(links_in_loops.begin()); em!=links_in_loops.end(); em++){
+          // std::cout << "em = " << em->first << " " << em->second << std::endl; // always updated
+          if(em->first==if_current){
+            if_current = em->second;
+            loop.push_back(if_current);
+            // std::cout << "debug. insert second" << std::endl;
+            links_in_loops.erase(em);
+            break;
+          }
+          else if(em->second==if_current){
+            if_current = em->first;
+            loop.push_back(if_current);
+            // std::cout << "debug. insert first" << std::endl;
+            links_in_loops.erase(em);
+            break;
+          }
+        } // end for
+        //  std::cout << "debug. if_current = " << if_current << std::endl;
+      }
+      links_in_loops.erase(ell);
+      loops.push_back(loop);
+    }
+
+    std::cout << "loops = " << std::endl;
+    for(auto loop : loops){
+      for(auto elem : loop) std::cout << elem << " ";
+      std::cout << std::endl;
+    }
+
   }
 
   return 0;

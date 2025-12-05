@@ -89,6 +89,10 @@ struct RefinedIcosahedron : Icosahedron{
     GetBasePoints();
   }
 
+  double mean_ell;
+
+
+
   // -----------------------------
 
   Idx NVertices() const { return 10*L*L+2; }
@@ -114,7 +118,8 @@ struct RefinedIcosahedron : Icosahedron{
     Idx counter=0;
     ss << std::scientific << std::setprecision(25);
     for(const V3& x : vertices){
-      ss << counter << ": " << x.transpose() << std::endl;
+      // ss << counter << ": " << x.transpose() << std::endl;
+      ss << x.transpose() << std::endl;
       counter++;
     }
     return ss.str();
@@ -562,6 +567,19 @@ struct RefinedIcosahedronDual {
   Idx NLinks() const { return simplicial.NLinks(); }
   Idx NFaces() const { return simplicial.NVertices(); }
 
+  std::string print() const {
+    std::stringstream ss;
+    Idx counter=0;
+    ss << std::scientific << std::setprecision(25);
+    for(const V3& x : vertices){
+      // ss << counter << ": " << x.transpose() << std::endl;
+      ss << x.transpose() << std::endl;
+      counter++;
+    }
+    return ss.str();
+  }
+
+
   Idx idx( const FaceCoords& n ) const {
     const Idx in = simplicial.idx( Coords{n[0], n[1], n[2]} );
     return 2*in+n[3];
@@ -912,7 +930,7 @@ struct RefinedIcosahedronDual {
   void FillDualLinks(){
     linkSimp2Dual.clear();
     for(Idx in=0; in<simplicial.NVertices(); in++){
-      const Coords n = simplicial.idx2Coords(in);
+      // const Coords n = simplicial.idx2Coords(in);
       const DualFace& face = faces[in];
       auto pf = face.begin();
       if(face.size()==6){
