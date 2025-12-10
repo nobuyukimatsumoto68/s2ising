@@ -43,7 +43,7 @@ using Complex = std::complex<double>;
 #include "loop.h"
 #include "fermion.h"
 
-constexpr int L = 2;
+constexpr int L = 4;
 constexpr Idx N = 10*L*L+2;
 
 
@@ -78,6 +78,7 @@ int main(int argc, char* argv[]){
   std::cout << phi.print() << std::endl;
 
   Eigen::MatrixXcd Dmat = D.matrix();
+  Dmat *= 2.0 * dual.mean_ell;
   // std::cout << Dmat.real() << std::endl;
   // std::cout << Dmat.imag() << std::endl;
   std::cout << Dmat.determinant() << std::endl;

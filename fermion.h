@@ -90,10 +90,10 @@ struct Fermion {
         dual.shift(fp,f,df);
         const Idx j=dual.idx(fp);
 
-        const SpinMatrix mat = - kappas[dual.linkidx(i,df)] * spin.P(f,df);
+        const SpinMatrix mat = - 0.5*kappas[dual.linkidx(i,df)] * spin.P(f,df);
         res.addMultBlock(i, mat, v, j);
       }
-      const SpinMatrix mat = 0.5 * mus[i] * spin.sigma[0];
+      const SpinMatrix mat = 0.5*mus[i] * spin.sigma[0];
       res.addMultBlock(i, mat, v, i);
     }
   }
@@ -120,7 +120,7 @@ struct Fermion {
     kappas.clear();
     kappas.resize( dual.NDirectedLinks() );
     for(Idx il=0; il<dual.NDirectedLinks(); il++) {
-      kappas[il] = dual.link_volumes[il] / dual.ells[il];
+      kappas[il] = 2.0*dual.link_volumes[il] / dual.ells[il] / dual.mean_ell;
     }
   }
 
@@ -130,6 +130,7 @@ struct Fermion {
 
     for(Idx i=0; i<dual.NVertices(); i++){
       for(int df=0; df<3; df++) mus[i] += kappas[dual.linkidx(i,df)];
+      mus[i] *= 0.5;
     }
   }
 
