@@ -20,6 +20,7 @@ using V2 = Eigen::Vector2d;
 using M3 = Eigen::Matrix3d;
 using Complex = std::complex<double>;
 
+#include "sphere.h"
 #include "icosahedron.h"
 #include "lattices.h"
 #include "groups.h"

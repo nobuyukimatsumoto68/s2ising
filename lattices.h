@@ -728,8 +728,8 @@ struct RefinedIcosahedronDual {
 
 
   int shift( FaceCoords& fp,
-              const FaceCoords& f,
-              const int df ) const {
+             const FaceCoords& f,
+             const int df ) const {
     const int type = f[3];
 
     int res = 0;
