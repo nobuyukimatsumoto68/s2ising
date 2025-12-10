@@ -731,6 +731,7 @@ struct RefinedIcosahedronDual {
              const FaceCoords& f,
              const int df ) const {
     const int type = f[3];
+    assert(0<=df && df<3);
 
     int res = 0;
     if(type==XZ){
@@ -831,6 +832,7 @@ struct RefinedIcosahedronDual {
 
 
   inline Idx linkidx( const Idx iff, const int df ) const {
+    assert(0<=df && df<3);
     return 3*iff + df;
   }
 
@@ -1029,6 +1031,7 @@ struct RefinedIcosahedronDual {
                        const int df
                        ) const {
     const Coords base{ f1[0], f1[1], f1[2] };
+    assert(0<=df && df<3);
     if(f1[3]==XZ){
       if(df==nA){
         simplicial.shiftPX( pA, base );

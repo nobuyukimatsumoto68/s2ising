@@ -174,7 +174,7 @@ struct DualSpinStructure : public Sphere {
 
   SpinMatrix Omega( const FaceCoords f, const int df ) const {
     const double omega = omegas[dual.linkidx(dual.idx(f), df)];
-    return std::cos(0.5*omega) * sigma[0] - I*std::sin(0.5*omega)*sigma[3];
+    return std::cos(0.5*omega) * sigma[0] + I*std::sin(0.5*omega)*sigma[3];
   }
 
   SpinMatrix P( const FaceCoords f, const int df ) const {

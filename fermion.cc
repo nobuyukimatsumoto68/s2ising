@@ -70,5 +70,33 @@ int main(int argc, char* argv[]){
 
   DualLoops<N> loops(dual);
 
+  Fermion D(spin);
+  FermionVector phi(dual);
+
+  phi( 0, 0 ) = 1.0;
+  std::cout << "# phi = " << std::endl;
+  std::cout << phi.print() << std::endl;
+
+  Eigen::MatrixXcd Dmat = D.matrix();
+  // std::cout << Dmat.real() << std::endl;
+  // std::cout << Dmat.imag() << std::endl;
+  std::cout << Dmat.determinant() << std::endl;
+
+  // Eigen::VectorXcd v0(2*dual.NVertices());
+  // v0[0] = 1.0;
+  // v0 = Dmat.inverse() * v0;
+  // std::cout << v0.array().abs() << std::endl;
+
+  // FermionVector Dphi(dual);
+  // D(Dphi, phi);
+
+  // SpinMatrix mat = spin.sigma[0];
+  // std::cout << "# mat = " << std::endl;
+  // std::cout << mat << std::endl;
+  // Dphi.insertMultBlock(1, mat, phi, 0);
+
+  // std::cout << "# Dphi = " << std::endl;
+  // std::cout << Dphi.print() << std::endl;
+
   return 0;
 }
