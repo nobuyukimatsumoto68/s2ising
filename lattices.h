@@ -549,6 +549,9 @@ struct RefinedIcosahedronDual {
   std::vector<double> vols; // hex vol
   double mean_vol;
 
+  std::map<const DirectedLink, const DirectedLink> linkSimp2Dual;
+  std::map<Link, int> getDirection;
+
   RefinedIcosahedronDual(const RefinedIcosahedron& simplicial_)
     : simplicial(simplicial_)
     , L(simplicial.L)
@@ -558,6 +561,7 @@ struct RefinedIcosahedronDual {
     assert(vertices.size()==2*Nx);
     GetBasePoints();
     FillFaces();
+    FillDirection();
     FillDualLinks();
     set_ell_link_volume();
     set_vol();
@@ -927,7 +931,19 @@ struct RefinedIcosahedronDual {
   }
 
 
-  std::map<const DirectedLink, const DirectedLink> linkSimp2Dual;
+  void FillDirection(){
+    for(Idx if1=0; if1<NVertices(); if1++){
+      const FaceCoords f1 = idx2FaceCoords(if1);
+      for(int df=0; df<3; df++) {
+        FaceCoords f2;
+        shift( f2, f1, df);
+        const Idx if2=idx(f2);
+        getDirection.insert( {Link{if1,if2}, df} );
+      }
+    }
+  }
+
+
 
   void FillDualLinks(){
     linkSimp2Dual.clear();

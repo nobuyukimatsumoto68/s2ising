@@ -18,10 +18,10 @@ public:
   Config c;
 
   std::vector<Loop> loops;
-  // auto begin(){ return loops.begin(); }
-  // auto end(){ return loops.end(); }
-  // auto begin() const { return loops.begin(); }
-  // auto end() const { return loops.end(); }
+  auto begin(){ return loops.begin(); }
+  auto end(){ return loops.end(); }
+  auto begin() const { return loops.begin(); }
+  auto end() const { return loops.end(); }
 
   DualLoops
   (
