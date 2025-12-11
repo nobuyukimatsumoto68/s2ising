@@ -40,8 +40,9 @@ using Complex = std::complex<double>;
 
 
 // #include <omp.h>
-#include "loop.h"
 #include "fermion.h"
+
+#include "loop.h"
 
 constexpr int L = 2;
 constexpr Idx N = 10*L*L+2;
@@ -68,9 +69,8 @@ int main(int argc, char* argv[]){
   RefinedIcosahedronDual dual(lattice);
   DualSpinStructure spin(dual);
 
-  DualLoops<N> loops(dual);
-
   Fermion D(spin);
+  DualLoops<N> loops(D);
   // FermionVector phi(dual);
 
   Idx q = std::pow(2, k) + r; // Binary: 00100101
@@ -81,45 +81,8 @@ int main(int argc, char* argv[]){
   std::cout << "loops = " << std::endl;
   std::cout << loops.printLoops() << std::endl;
 
-
-  double w_prod = 1;
-  for(const auto& loop : loops){
-    double w = 1;
-    double factor = 1;
-    SpinMatrix mat = SpinMatrix::Identity();
-    for(int i=0; i<loop.size(); i++){
-      const Idx if0 = loop[(i+loop.size()-1)%loop.size()];
-      const Idx if1 = loop[i];
-      const Idx if2 = loop[(i+1)%loop.size()];
-
-      const FaceCoords f1 = dual.idx2FaceCoords(if1);
-      const int df2 = dual.getDirection.at(Link{if1,if2});
-
-      std::cout << if1 << " " << if2 << " " << df2 << std::endl;
-      factor *= D.kappas[dual.linkidx(if1,df2)];
-      factor /= D.mus[if1];
-      mat = mat * spin.P( f1, df2 );
-      std::cout << D.kappas[dual.linkidx(if1,df2)] << " " << D.mus[if1] << std::endl;
-
-      const int df0 = dual.getDirection.at(Link{if1,if0});
-
-      double al10 = spin.alphas[dual.linkidx(if1, df0)];
-      double al12 = spin.alphas[dual.linkidx(if1, df2)];
-      double dalpha = (al10+M_PI)-al12;
-      w *= D.kappas[dual.linkidx(if1,df2)];
-      w /= D.mus[if1];
-      while(dalpha>M_PI) dalpha -= 2.0*M_PI;
-      while(dalpha<-M_PI) dalpha += 2.0*M_PI;
-      w *= std::cos( dalpha/2 );
-      std::cout << "debug. cos = " << std::cos( dalpha/2 ) << std::endl;
-    }
-    w *= -1.0;
-    const Complex w_ = factor*mat.trace();
-    std::cout << "w_ = " << w_ << std::endl;
-    std::cout << "w  = " << w << std::endl;
-    w_prod *= w;
-  }
-  std::cout << "w_prod  = " << w_prod << std::endl;
+  std::cout << "w_prod  = " << loops.eval() << std::endl;
+  std::cout << "w_prod  = " << loops.eval_prod() << std::endl;
 
 
   return 0;
