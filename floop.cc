@@ -44,7 +44,7 @@ using Complex = std::complex<double>;
 
 #include "loop.h"
 
-constexpr int L = 2;
+constexpr int L = 1;
 constexpr Idx N = 10*L*L+2;
 
 
@@ -73,17 +73,17 @@ int main(int argc, char* argv[]){
   DualLoops<N> loops(D);
   // FermionVector phi(dual);
 
-  Idx q = std::pow(2, k) + r; // Binary: 00100101
-  loops.set( q );
 
-  std::cout << "idx = " << loops() << std::endl;
-  std::cout << "config = " << loops.config() << std::endl;
-  std::cout << "loops = " << std::endl;
-  std::cout << loops.printLoops() << std::endl;
-
-  std::cout << "w_prod  = " << loops.eval() << std::endl;
-  std::cout << "w_prod  = " << loops.eval_prod() << std::endl;
-
+  // Idx q = std::pow(2, k) + r; // Binary: 00100101
+  // Idx q = 1025; // std::pow(2, N) + 0; // Binary: 00100101
+  for(Idx q=0; q<std::pow(2, N); q++){
+    loops.set( q );
+    std::cout << "idx = " << loops() << std::endl;
+    std::cout << "config = " << loops.config() << std::endl;
+    std::cout << "loops = " << std::endl;
+    std::cout << loops.printLoops() << std::endl;
+    std::cout << "w_prod  = " << loops.eval() << std::endl;
+  }
 
   return 0;
 }

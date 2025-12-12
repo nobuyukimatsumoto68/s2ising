@@ -229,7 +229,7 @@ struct RefinedIcosahedron : Icosahedron{
       return 0;
     }
     if(s==PatchIdxN) {
-      np = Coords{ 0,L-1,5 };
+      np = Coords{ 0,L-1,9 };
       return 1;
     }
 
@@ -257,11 +257,11 @@ struct RefinedIcosahedron : Icosahedron{
     // assert(0<=s && s<NPatches);
     assert(0<=s && s<PatchIdxVoid);
     if(s==PatchIdxS) {
-      np = Coords{ L-1,0,3 };
+      np = Coords{ L-1,0,2 };
       return 0;
     }
     if(s==PatchIdxN) {
-      np = Coords{ 0,L-1,8 };
+      np = Coords{ 0,L-1,7 };
       return 1;
     }
 
@@ -294,7 +294,7 @@ struct RefinedIcosahedron : Icosahedron{
     // assert(0<=s && s<NPatches);
     assert(0<=s && s<PatchIdxVoid);
     if(s==PatchIdxS) {
-      np = Coords{ L-1,0,1 };
+      np = Coords{ L-1,0,3 };
       return 2;
     }
     if(s==PatchIdxN) {
@@ -327,11 +327,11 @@ struct RefinedIcosahedron : Icosahedron{
     // assert(0<=s && s<NPatches);
     assert(0<=s && s<PatchIdxVoid);
     if(s==PatchIdxS) {
-      np = Coords{ L-1,0,4 };
+      np = Coords{ L-1,0,1 };
       return 2;
     }
     if(s==PatchIdxN) {
-      np = Coords{ 0,L-1,9 };
+      np = Coords{ 0,L-1,8 };
       return 0;
     }
 
@@ -364,11 +364,11 @@ struct RefinedIcosahedron : Icosahedron{
     // assert(0<=s && s<NPatches);
     assert(0<=s && s<PatchIdxVoid);
     if(s==PatchIdxS) {
-      np = Coords{ L-1,0,2 };
+      np = Coords{ L-1,0,4 };
       return 1;
     }
     if(s==PatchIdxN) {
-      np = Coords{ 0,L-1,7 };
+      np = Coords{ 0,L-1,5 };
       return 2;
     }
 
@@ -920,7 +920,7 @@ struct RefinedIcosahedronDual {
     // north pole
     {
       DualFace face;
-      for(int s=NPatches/2; s<NPatches; s++){
+      for(int s=NPatches-1; s>=NPatches/2; s--){
         const FaceCoords f1{0, L-1, s, ZY};
         const Idx if1 = idx(f1);
         const int df = nA;
@@ -950,6 +950,13 @@ struct RefinedIcosahedronDual {
     for(Idx in=0; in<simplicial.NVertices(); in++){
       // const Coords n = simplicial.idx2Coords(in);
       const DualFace& face = faces[in];
+      // std::cout << "debug. face around in = " << in << std::endl;
+      // for(auto elem : face) {
+      //   const FaceCoords fA = idx2FaceCoords( elem.first );
+      //   std::cout << fA[0] << " " << fA[1] << " " << fA[2] << " " << fA[3]
+      //             << " / " << elem.second << std::endl;
+      // }
+      // std::cout << std::endl;
       auto pf = face.begin();
       if(face.size()==6){
         // x=0
@@ -966,18 +973,34 @@ struct RefinedIcosahedronDual {
         linkSimp2Dual.insert( { DirectedLink{in,2}, *pf } ); pf++;
       }
       else{
-        // x=0
-        linkSimp2Dual.insert( { DirectedLink{in,0}, *pf } ); pf++;
-        // -y=4
-        linkSimp2Dual.insert( { DirectedLink{in,4}, *pf } ); pf++;
-        // // -z=5
-        // linkSimp2Dual.insert( { DirectedLink{in,5}, *pf } ); pf++;
-        // -x=3
-        linkSimp2Dual.insert( { DirectedLink{in,3}, *pf } ); pf++;
-        // y=1
-        linkSimp2Dual.insert( { DirectedLink{in,1}, *pf } ); pf++;
-        // z=2
-        linkSimp2Dual.insert( { DirectedLink{in,2}, *pf } ); pf++;
+        if( in==simplicial.idxS() ){
+          linkSimp2Dual.insert( { DirectedLink{in,0}, DirectedLink{idx(FaceCoords{L-1,0,0,0}),2} } );
+          linkSimp2Dual.insert( { DirectedLink{in,4}, DirectedLink{idx(FaceCoords{L-1,0,1,0}),2} } );
+          linkSimp2Dual.insert( { DirectedLink{in,3}, DirectedLink{idx(FaceCoords{L-1,0,2,0}),2} } );
+          linkSimp2Dual.insert( { DirectedLink{in,1}, DirectedLink{idx(FaceCoords{L-1,0,3,0}),2} } );
+          linkSimp2Dual.insert( { DirectedLink{in,2}, DirectedLink{idx(FaceCoords{L-1,0,4,0}),2} } );
+        }
+        else if( in==simplicial.idxN() ){
+          linkSimp2Dual.insert( { DirectedLink{in,0}, DirectedLink{idx(FaceCoords{0,L-1,9,1}),0} } );
+          linkSimp2Dual.insert( { DirectedLink{in,4}, DirectedLink{idx(FaceCoords{0,L-1,8,1}),0} } );
+          linkSimp2Dual.insert( { DirectedLink{in,3}, DirectedLink{idx(FaceCoords{0,L-1,7,1}),0} } );
+          linkSimp2Dual.insert( { DirectedLink{in,1}, DirectedLink{idx(FaceCoords{0,L-1,6,1}),0} } );
+          linkSimp2Dual.insert( { DirectedLink{in,2}, DirectedLink{idx(FaceCoords{0,L-1,5,1}),0} } );
+        }
+        else{
+          // x=0
+          linkSimp2Dual.insert( { DirectedLink{in,0}, *pf } ); pf++;
+          // -y=4
+          linkSimp2Dual.insert( { DirectedLink{in,4}, *pf } ); pf++;
+          // // -z=5
+          // linkSimp2Dual.insert( { DirectedLink{in,5}, *pf } ); pf++;
+          // -x=3
+          linkSimp2Dual.insert( { DirectedLink{in,3}, *pf } ); pf++;
+          // y=1
+          linkSimp2Dual.insert( { DirectedLink{in,1}, *pf } ); pf++;
+          // z=2
+          linkSimp2Dual.insert( { DirectedLink{in,2}, *pf } ); pf++;
+        }
       }
       // else assert(false);
     }

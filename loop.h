@@ -46,9 +46,11 @@ public:
 
   std::string printLoops() const {
     std::stringstream ss;
+    bool is_first = true;
     for(auto loop : loops){
+      if(is_first) is_first = false;
+      else ss << std::endl;
       for(auto elem : loop) ss << elem << " ";
-      ss << std::endl;
     }
     return ss.str();
   }
@@ -65,6 +67,8 @@ public:
     std::set<Idx> ups;
     for(Idx in=0; in<N; in++) if(c[in]==1) ups.insert(in);
 
+    // for(auto elem : ups) std::cout << "debug. elem = " << elem << std::endl;
+
     std::set<Link> links_in_loops;
     for(const Idx in : ups){
       const Coords n = lattice.idx2Coords(in);
@@ -76,9 +80,13 @@ public:
         const Idx inp = lattice.idx(np);
 
         if( !ups.contains(inp) ){ // (n, np) : broken
+          // std::cout << "debug. broken. in: " << in << " inp: " << inp << std::endl;
           const DirectedLink duallink = dual.linkSimp2Dual.at( DirectedLink{in,mu} );
           const FaceCoords fA = dual.idx2FaceCoords( duallink.first );
           const int df = duallink.second;
+          // std::cout << "debug. broken. dual: "
+          //           << fA[0] << " " << fA[1] << " " << fA[2] << " " << fA[3] << " / "
+          //           << duallink.second << std::endl;
           FaceCoords fB;
           dual.shift( fB, fA, df );
 
@@ -88,6 +96,9 @@ public:
         }
       }
     }
+
+    // for(auto em : links_in_loops) std::cout << "debug. em = " << em.first << " " << em.second << std::endl;
+    // return;
 
     // group links
     while(links_in_loops.size()!=0){
@@ -100,8 +111,11 @@ public:
       Idx if_current = if_init;
       loop.push_back(if_current);
 
+      // std::cout << "debug. pt1" << std::endl;
+
       while(*std::prev(loop.end())!=if_end){
         for(auto em=std::next(links_in_loops.begin()); em!=links_in_loops.end(); em++){
+          // std::cout << "debug. em = " << em->first << " " << em->second << std::endl;
           if(em->first==if_current){
             if_current = em->second;
             loop.push_back(if_current);
@@ -118,6 +132,7 @@ public:
       }
       links_in_loops.erase(ell);
       loops.push_back(loop);
+      // std::cout << "debug. loops.size() == " << loops.size() << std::endl;
     }
   }
 
