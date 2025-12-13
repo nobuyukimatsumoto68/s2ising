@@ -72,12 +72,20 @@ struct Fermion {
   std::vector<double> mus; // dual.idx
 
 
-  Fermion( const DualSpinStructure& spin_ )
+  Fermion( const DualSpinStructure& spin_, const bool is_triv=false )
     : spin(spin_)
     , dual(spin.dual)
   {
-    set_kappas();
-    set_mus();
+    if(is_triv){
+      kappas.resize( dual.NDirectedLinks() );
+      mus.resize( dual.NDirectedLinks() );
+      for( double& kappa : kappas ) kappa = 0.0;
+      for( double& mu : mus ) mu = 1.0;
+    }
+    else{
+      set_kappas();
+      set_mus();
+    }
   }
 
   using V = FermionVector<RefinedIcosahedronDual>;
@@ -90,10 +98,12 @@ struct Fermion {
         dual.shift(fp,f,df);
         const Idx j=dual.idx(fp);
 
-        const SpinMatrix mat = - 0.5*kappas[dual.linkidx(i,df)] * spin.P(f,df);
+        // const SpinMatrix mat = - 0.5*kappas[dual.linkidx(i,df)] * spin.P(f,df);
+        const SpinMatrix mat = - kappas[dual.linkidx(i,df)] * spin.P(f,df);
         res.addMultBlock(i, mat, v, j);
       }
-      const SpinMatrix mat = 0.5*mus[i] * spin.sigma[0];
+      // const SpinMatrix mat = 0.5*mus[i] * spin.sigma[0];
+      const SpinMatrix mat = mus[i] * spin.sigma[0];
       res.addMultBlock(i, mat, v, i);
     }
   }

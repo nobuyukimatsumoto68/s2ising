@@ -6,7 +6,7 @@
 
 
 template<Idx N>
-class DualLoops {
+class DualLoop {
 public:
   using Config = std::bitset<N>;
   using Loop = std::vector<Idx>;
@@ -25,7 +25,9 @@ public:
   auto begin() const { return loops.begin(); }
   auto end() const { return loops.end(); }
 
-  DualLoops
+  const Idx Nloops;
+
+  DualLoop
   (
    const Fermion& D_
    )
@@ -33,6 +35,7 @@ public:
     , spin(D.spin)
     , dual(D.dual)
     , lattice(dual.simplicial)
+    , Nloops(std::pow(2, N))
   {}
 
   Idx operator()() const { return q; }
@@ -156,9 +159,10 @@ public:
       w_prod *= w;
     }
     assert(std::abs(w_prod.imag())<1.0e-13);
-    return w_prod.real();
+    return std::pow(-1,loops.size()) * w_prod.real();
   }
 
+  // define u012 and rewrite
   double eval(){
     double w_prod = 1.;
     for(const auto& loop : loops){
@@ -180,7 +184,7 @@ public:
         while(dalpha<-M_PI) dalpha += 2.0*M_PI;
         w *= std::cos( dalpha/2 );
       }
-      w *= -1.0;
+      // w *= -1.0;
       w_prod *= w;
     }
     return w_prod;
