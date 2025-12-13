@@ -5,6 +5,9 @@
 #include <set>
 
 
+using Corner = std::array<Idx, 3>;
+
+
 template<Idx N>
 class DualLoop {
 public:
@@ -27,6 +30,8 @@ public:
 
   const Idx Nloops;
 
+  std::map<const Corner,const double> us;
+
   DualLoop
   (
    const Fermion& D_
@@ -36,7 +41,9 @@ public:
     , dual(D.dual)
     , lattice(dual.simplicial)
     , Nloops(std::pow(2, N))
-  {}
+  {
+    FillCornerFactors();
+  }
 
   Idx operator()() const { return q; }
 
@@ -56,6 +63,40 @@ public:
       for(auto elem : loop) ss << elem << " ";
     }
     return ss.str();
+  }
+
+  void FillCornerFactors(){
+    us.clear();
+    for(Idx if1=0; if1<dual.NVertices(); if1++){
+      const FaceCoords f1 = dual.idx2FaceCoords( if1 );
+      for(int df0=0; df0<3; df0++){
+        for(int df2=0; df2<3; df2++){
+          if(df0==df2) continue;
+          FaceCoords f0, f2;
+          dual.shift( f0, f1, df0 );
+          dual.shift( f2, f1, df2 );
+          const Idx if0 = dual.idx(f0);
+          const Idx if2 = dual.idx(f2);
+
+          const double al10 = spin.alphas[dual.linkidx(if1, df0)];
+          const double al12 = spin.alphas[dual.linkidx(if1, df2)];
+          double dalpha = (al10+M_PI)-al12;
+          while(dalpha>M_PI) dalpha -= 2.0*M_PI;
+          while(dalpha<-M_PI) dalpha += 2.0*M_PI;
+
+          double u=1.0;
+          u *= std::sqrt(D.kappas[dual.linkidx(if1,df2)]);
+          u *= std::sqrt(D.kappas[dual.linkidx(if1,df0)]);
+          u /= D.mus[if1];
+          u *= std::cos( dalpha/2 );
+
+          const Corner c012{if0,if1,if2};
+          const Corner c210{if2,if1,if0};
+          us.insert( { c012, u } );
+          us.insert( { c210, u } );
+        }
+      }
+    }
   }
 
 
@@ -164,6 +205,22 @@ public:
 
   // define u012 and rewrite
   double eval(){
+    double w_prod = 1.;
+    for(const auto& loop : loops){
+      double w = 1.;
+      for(int i=0; i<(int)loop.size(); i++){
+        const Idx if0 = loop[(i+loop.size()-1)%loop.size()];
+        const Idx if1 = loop[i];
+        const Idx if2 = loop[(i+1)%loop.size()];
+        w *= us.at(Corner{if0,if1,if2});
+      }
+      w_prod *= w;
+    }
+    return w_prod;
+  }
+
+  // define u012 and rewrite
+  double eval_(){
     double w_prod = 1.;
     for(const auto& loop : loops){
       double w = 1.;
