@@ -48,7 +48,7 @@ using Complex = std::complex<double>;
 #include "loop.h"
 #include "ising.h"
 
-constexpr int L = 2;
+constexpr int L = 4;
 constexpr Idx N = 10*L*L+2;
 
 #ifndef _OPENMP
@@ -85,6 +85,7 @@ int main(int argc, char* argv[]){
   Idx q = std::pow(2, k) + r; // Binary: 00100101
   loop.set( q );
   std::cout << "config = " << loop.config() << std::endl;
+  std::cout << "loops = " << loop.printLoops() << std::endl;
   std::cout << ising.eval_loop( q ) << std::endl;
   std::cout << loop.eval() << std::endl;
 
