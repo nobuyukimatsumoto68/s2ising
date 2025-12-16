@@ -8,11 +8,11 @@
 using Corner = std::array<Idx, 3>;
 
 
-template<Idx N>
-class DualLoop {
+template<Idx N, Idx N1, Idx N2>
+class DualGraph {
 public:
-  using Config = std::bitset<N>;
-  using Loop = std::vector<Idx>;
+  using Config = std::bitset<N1>;
+  using Graph = std::vector<Idx>;
 
   const Fermion& D;
   const DualSpinStructure& spin;
@@ -32,7 +32,7 @@ public:
 
   std::map<const Corner,const double> us;
 
-  DualLoop
+  DualGraph
   (
    const Fermion& D_
    )
@@ -91,9 +91,9 @@ public:
           u *= std::cos( dalpha/2 );
 
           const Corner c012{if0,if1,if2};
-          // const Corner c210{if2,if1,if0};
+          const Corner c210{if2,if1,if0};
           us.insert( { c012, u } );
-          // us.insert( { c210, u } );
+          us.insert( { c210, u } );
         }
       }
     }
@@ -203,7 +203,6 @@ public:
         const Idx if0 = loop[(i+loop.size()-1)%loop.size()];
         const Idx if1 = loop[i];
         const Idx if2 = loop[(i+1)%loop.size()];
-        // std::cout << "debug. u = " << us.at(Corner{if0,if1,if2}) << std::endl;
         w *= us.at(Corner{if0,if1,if2});
       }
       w_prod *= w;

@@ -835,16 +835,42 @@ struct RefinedIcosahedronDual {
   }
 
 
-  inline Idx linkidx( const Idx iff, const int df ) const {
+  inline Idx directedlinkidx( const Idx iff, const int df ) const {
     assert(0<=df && df<3);
     return 3*iff + df;
   }
 
-  inline Idx linkidx( const DirectedLink& ell ) const {
-    return linkidx(ell.first, ell.second);
+  inline Idx directedlinkidx( const DirectedLink& ell ) const {
+    return directedlinkidx(ell.first, ell.second);
   }
 
-  DirectedLink linkidx2DirectedLink( const Idx il ) const {
+  // Idx linkidx( Idx ifa, Idx ifb ) const { // copy
+  //   assert(ifa!=ifb);
+  //   FaceCoords fa = idx2FaceCoords(ifa);
+  //   FaceCoords fb = idx2FaceCoords(ifb);
+
+  //   if(fa[3]!=XZ){
+  //     const FaceCoords fc = fa; const Idx ifc = ifa;
+  //     fa = fb; ifa = ifb;
+  //     fb = fc; ifb = ifc;
+  //   }
+  //   assert(fa[3]==XZ);
+  //   assert(fb[3]==ZY);
+  //   const int dfab = getDirection.at(Link{ifa,ifb});
+
+  //   const Idx in = simplicial.idx( Coords{fa[0],fa[1],fa[2]} );
+  //   const Idx res = 3*in + dfab;
+  //   assert( 0<=res && res<simplicial.NLinks() );
+  //   return res;
+  // }
+
+  // DirectedLink linkidx2DirectedLink( const Idx il ) const {
+  //   const int df = il%3;
+  //   Coords n = simplicial.idx2Coords( (il-df)/3 );
+  //   return DirectedLink{ idx(FaceCoords{n[0],n[1],n[2],XZ}), df };
+  // }
+
+  DirectedLink directedlinkidx2DirectedLink( const Idx il ) const {
     const int df = il%3;
     const Idx iff = il/3;
     return std::make_pair(iff, df);
@@ -1110,7 +1136,7 @@ struct RefinedIcosahedronDual {
     link_volumes.resize( NDirectedLinks() );
 
     for(Idx il=0; il<NDirectedLinks(); il++){
-      const DirectedLink ell = linkidx2DirectedLink(il);
+      const DirectedLink ell = directedlinkidx2DirectedLink(il);
       const Idx if1 = ell.first;
       const FaceCoords f1 = idx2FaceCoords( if1 );
       const int df = ell.second;

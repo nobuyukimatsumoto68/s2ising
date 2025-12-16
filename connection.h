@@ -57,7 +57,7 @@ struct DualSpinStructure : public Sphere {
       const DualFace face = dual.faces[i];
       double omega_sum = 0.0;
       for(auto elem : face) {
-        omega_sum += omegas[ dual.linkidx( elem.first, elem.second ) ];
+        omega_sum += omegas[ dual.directedlinkidx( elem.first, elem.second ) ];
       }
       while(omega_sum>2.0*M_PI) omega_sum -= 4.0*M_PI;
       while(omega_sum<=-2.0*M_PI) omega_sum += 4.0*M_PI;
@@ -91,7 +91,7 @@ struct DualSpinStructure : public Sphere {
         const Idx if2 = dual.idx( f2 );
         const V3 rf2 = dual.vertices[if2];
 
-        alphas[dual.linkidx(if1, df)] = alpha( rf1, rf2, 0.0 );
+        alphas[dual.directedlinkidx(if1, df)] = alpha( rf1, rf2, 0.0 );
       }
     }
   }
@@ -167,18 +167,18 @@ struct DualSpinStructure : public Sphere {
         else if(dphi < -M_PI) dphi += 2.0*M_PI;
         if( std::abs(dphi1) + std::abs(dphi2) - std::abs(dphi) < 1.0e-14 ) omega12 -= 2.0*M_PI;
 
-        omegas[dual.linkidx(if1, df)] = omega12;
+        omegas[dual.directedlinkidx(if1, df)] = omega12;
       }
     }
   }
 
   SpinMatrix Omega( const FaceCoords f, const int df ) const {
-    const double omega = omegas[dual.linkidx(dual.idx(f), df)];
+    const double omega = omegas[dual.directedlinkidx(dual.idx(f), df)];
     return std::cos(0.5*omega) * sigma[0] + I*std::sin(0.5*omega)*sigma[3];
   }
 
   SpinMatrix P( const FaceCoords f, const int df ) const {
-    const double alpha = alphas[dual.linkidx(dual.idx(f), df)];
+    const double alpha = alphas[dual.directedlinkidx(dual.idx(f), df)];
     const SpinMatrix tmp = 0.5*(sigma[0] - std::cos(alpha)*sigma[1] - std::sin(alpha)*sigma[2]);
     return tmp * Omega(f,df);
   }

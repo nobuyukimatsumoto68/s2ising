@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <filesystem>
 
+#include <random>
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -48,7 +49,7 @@ using Complex = std::complex<double>;
 #include "loop.h"
 #include "ising.h"
 
-constexpr int L = 4;
+constexpr int L = 1;
 constexpr Idx N = 10*L*L+2;
 
 #ifndef _OPENMP
@@ -82,12 +83,18 @@ int main(int argc, char* argv[]){
 
   Ising ising(loop);
 
-  Idx q = std::pow(2, k) + r; // Binary: 00100101
-  loop.set( q );
-  std::cout << "config = " << loop.config() << std::endl;
-  std::cout << "loops = " << loop.printLoops() << std::endl;
-  std::cout << ising.eval_loop( q ) << std::endl;
-  std::cout << loop.eval() << std::endl;
+  double sum = 0.0;
+  for(Idx q=0; q<std::pow(2,N); q++){
+    // Idx q = std::pow(2, k) + r; // Binary: 00100101
+    loop.set( q );
+    std::cout << "config = " << loop.config() << std::endl;
+    std::cout << "loops = " << loop.printLoops() << std::endl;
+    std::cout << ising.eval_loop( q ) << std::endl;
+    std::cout << loop.eval() << std::endl;
+    assert( std::abs(loop.eval()-ising.eval_loop( q ))<1.0e-14 );
+    sum += ising.eval_loop( q );
+  }
+  std::cout << "sum = " << sum << std::endl;
 
   return 0;
 }
