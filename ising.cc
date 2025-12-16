@@ -216,6 +216,19 @@ int main(int argc, char* argv[]){
     std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() ) << std::endl;
   }
 
+  {
+    DualLoop<N> loop(D);
+    Ising ising(loop);
+    Spin<N, N2> s(ising);
+    s.random();
+    std::cout << "s = " << s.print() << std::endl;
+    s.ckpoint("check.dat");
+    s.set0();
+    std::cout << "s0 = " << s.print() << std::endl;
+    s.read("check.dat");
+    std::cout << "s = " << s.print() << std::endl;
+  }
+
   return 0;
 }
 

@@ -2,6 +2,7 @@
 
 
 #include <random>
+#include <stack>
 
 template<Idx N>
 class Ising{
@@ -180,6 +181,9 @@ public:
     }
   }
 
+  void set1(const Idx i) { s[i] = 1; }
+  void set0(const Idx i) { s[i] = 0; }
+
   void random() {
     for(Idx i=0; i<s.size(); i++){
       s[i] = dist01I();
@@ -225,7 +229,7 @@ public:
     for(Idx il=0; il<2*dual.NLinks(); il++){
       const DirectedLink ell = dual.directedlinkidx2DirectedLink( il );
       const Idx if1 = ell.first;
-      FaceCoords f = dual.idx2FaceCoords( ell.first );
+      // FaceCoords f = dual.idx2FaceCoords( ell.first );
       // if(f[3]!=XZ) continue;
 
       FaceCoords f2;
@@ -271,11 +275,14 @@ public:
     std::ofstream of( str, std::ios::out | std::ios::binary | std::ios::trunc);
     if(!of) assert(false);
 
-    // bool tmp = 0;
+    bool tmp = 0;
     // for(Idx i=0; i<Lx*Ly; i++){
     for(Idx i=0; i<s.size(); i++){
-      of.write( (char*) &s+i, sizeof(bool) );
+      tmp = s[i];
+      // std::cout << tmp << " ";
+      of.write( (char*) &tmp, sizeof(bool) );
     }
+    // std::cout << std::endl;
     of.close();
   }
 
@@ -283,70 +290,72 @@ public:
     std::ifstream ifs( str, std::ios::in | std::ios::binary );
     if(!ifs) assert(false);
 
-    // bool tmp;
+    bool tmp;
     // for(Idx i=0; i<Lx*Ly; ++i){
     for(Idx i=0; i<s.size(); i++){
-      ifs.read((char*) &s+i, sizeof(bool) );
+      ifs.read((char*) &tmp, sizeof(bool) );
+      // std::cout << tmp << " ";
+      s[i] = tmp;
       // (*this)[i] = tmp;
     }
+    // std::cout << std::endl;
     ifs.close();
+  }
+
+
+
+  void heatbath(){
+    // omp not allowed
+    for(Idx if1=0; if1<dual.NVertices(); if1++){
+      double henv = 0;
+      for(int df=0; df<3; df++){
+        FaceCoords f2;
+        dual.shift( f2, dual.idx2FaceCoords( if1 ), df );
+        henv += ising.betas.at(DirectedLink{if1,df})*(*this)[dual.idx(f2)];
+      }
+
+      const double p = std::exp(2.0*henv);
+      const double r = dist01();
+      if( r<p/(1.0+p) ) set1(if1);
+      else set0(if1);
+    }
+  }
+
+
+  void wolff(){
+    std::vector<bool> is_cluster(dual.NVertices(), false);
+    std::stack<Idx> stack_idx;
+
+    Idx init = dist0N();
+
+    is_cluster[init] = true;
+    stack_idx.push(init);
+
+    while( stack_idx.size() != 0 ){
+
+      const Idx p = stack_idx.top();
+      stack_idx.pop();
+      s[p] = !s[p]; // flip when visited
+
+      for(int df = 0; df<3; df++){
+        FaceCoords f2;
+        dual.shift( f2, dual.idx2FaceCoords( p ), df );
+        Idx q=dual.idx(f2);
+
+        if( s[q] == s[p] || is_cluster[q] ) continue; // s[x]*sR[y]<0 or y in c
+
+        const double r = dist01();
+        if( r < std::exp(-2.0 * ising.betas.at(DirectedLink{p,df})) ) continue; // reject
+
+        is_cluster[q] = true;
+        stack_idx.push(q);
+      }
+    }
   }
 
 
 
 };
 
-
-// void heatbath( Spin& s ){
-//   // omp not allowed
-//   for(Idx i=0; i<Lx*Ly; i++){
-//     if( !is_site(i) ) continue;
-
-//     double henv = 0;
-//     for(int mu=0; mu<SIX; mu++){
-//       if( !is_link(i,mu) ) continue;
-//       Idx j;
-//       cshift( j, i, mu );
-//       henv += Beta[mu%THREE]*s[j];
-//     }
-
-//     const double p = std::exp(2.0*henv);
-//     const double r = dist01();
-//     if( r<p/(1.0+p) ) s[i] = 1;
-//     else s[i] = -1;
-//   }
-// }
-
-
-// void wolff( Spin& s ){
-//   std::vector<int> is_cluster(Lx*Ly, 0);
-//   std::stack<Idx> stack_idx;
-
-//   Idx init = dist0N();
-//   while( !is_site(init) ) init = dist0N();
-
-//   is_cluster[init] = 1;
-//   stack_idx.push(init);
-
-//   while( stack_idx.size() != 0 ){
-
-//     const Idx p = stack_idx.top();
-//     stack_idx.pop();
-//     s[p] = -s[p]; // flip when visited
-
-//     for(int mu = 0; mu < SIX; mu++){
-//       if( !is_link(p,mu) ) continue;
-//       Idx q;
-//       cshift(q, p, mu);
-//       if( s[q] == s[p] || is_cluster[q]==1 ) continue; // s[x]*sR[y]<0 or y in c
-
-//       const double r = dist01();
-//       if( r < std::exp(-2.0 * Beta[mu%THREE]) ) continue; // reject
-
-//       is_cluster[q] = 1;
-//       stack_idx.push(q);
-//     }
-//   }
-// }
 
 
