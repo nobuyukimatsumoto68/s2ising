@@ -15,6 +15,7 @@ public:
 
   std::map<const DirectedLink, const double> ts_aug;
   std::map<const DirectedLink, const double> betas;
+  std::vector<double> beta; // directedlinkidx
   // std::map<const Link, const double> As;
 
   Ising( DualLoop<N>& loops_ )
@@ -63,6 +64,8 @@ public:
   }
 
   void FillBetas(){
+    beta.clear();
+    beta.resize( dual.NDirectedLinks() );
     for(Idx il=0; il<dual.NDirectedLinks(); il++) {
       const DirectedLink link = dual.directedlinkidx2DirectedLink(il);
       const Idx if1 = link.first;
@@ -78,6 +81,7 @@ public:
 
       betas.insert( {DirectedLink{if1,df12}, std::atanh(t)} );
       betas.insert( {DirectedLink{if2,df21}, std::atanh(t)} );
+      beta[il] = std::atanh(t);
 
       // const double b12 = std::atanh(t12);
       // const double b21 = std::atanh(t21);
@@ -311,12 +315,19 @@ public:
       for(int df=0; df<3; df++){
         FaceCoords f2;
         dual.shift( f2, dual.idx2FaceCoords( if1 ), df );
-        henv += ising.betas.at(DirectedLink{if1,df})*(*this)[dual.idx(f2)];
+        // henv += ising.betas.at(DirectedLink{if1,df})*(*this)[dual.idx(f2)];
+        henv += ising.beta[dual.directedlinkidx(if1,df)] * (*this)[dual.idx(f2)];
       }
 
       const double p = std::exp(2.0*henv);
       const double r = dist01();
-      if( r<p/(1.0+p) ) set1(if1);
+      if( r<p/(1.0+p) ) {
+        // std::cout << "debug. if1 = " << if1 << std::endl;
+        // std::cout << "debug. p = " << p << std::endl;
+        // std::cout << "debug. r0 = " << p/(1.0+p) << std::endl;
+        // std::cout << "debug. r = " << r << std::endl;
+        set1(if1);
+      }
       else set0(if1);
     }
   }
@@ -345,7 +356,8 @@ public:
         if( s[q] == s[p] || is_cluster[q] ) continue; // s[x]*sR[y]<0 or y in c
 
         const double r = dist01();
-        if( r < std::exp(-2.0 * ising.betas.at(DirectedLink{p,df})) ) continue; // reject
+        // if( r < std::exp(-2.0 * ising.betas.at(DirectedLink{p,df})) ) continue; // reject
+        if( r < std::exp(-2.0 * ising.beta[dual.directedlinkidx(p,df)]) ) continue; // reject
 
         is_cluster[q] = true;
         stack_idx.push(q);
