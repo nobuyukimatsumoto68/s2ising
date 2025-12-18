@@ -76,11 +76,10 @@ int main(int argc, char* argv[]){
 
   const std::string description = "L"+std::to_string(L);
   const std::string dir = "./data_"+description+"/";
-  std::filesystem::create_directories( datadir );
+  std::filesystem::create_directories( dir );
 
-  const int Nheatbath = 4;
-  const int Nwolff = 10;
-  const int Nrepeat = 4;
+  const int Nrepeat = 100;
+  const int Nconf = 1e5;
 
   // --------------------
 
@@ -93,31 +92,47 @@ int main(int argc, char* argv[]){
   Ising ising(loop);
   Spin<N, N2> s(ising,seed);
 
-  std::cout << "orig = " << std::endl
-            << s.print() << std::endl;
-  s.random();
-  std::cout << "random = " << std::endl
-            << s.print() << std::endl;
+  // std::cout << "orig = " << std::endl
+  //           << s.print() << std::endl;
+  // s.random();
+  // std::cout << "random = " << std::endl
+  //           << s.print() << std::endl;
+  // s.ckpoint( "test" );
+  // s.random();
+  // std::cout << s.print() << std::endl;
+  // s.read( "test" );
+  // std::cout << s.print() << std::endl;
+  // s.random();
+  // std::cout << s.print() << std::endl;
 
+  int n_init=0;
+  {
+    for(n_init=1; n_init<Nconf; n_init++ ){
+      const std::string filepath = dir+std::to_string(n_init);
+      const bool bool_lat = std::filesystem::exists(filepath+".lat");
+      const bool bool_rng = std::filesystem::exists(filepath+".rng");
+      if(!(bool_lat&&bool_rng)) break;
+    }
+    n_init -= 1;
 
+    if(n_init>0){ // from existing
+      std::cout << "read from n_init = " << n_init << std::endl;
+      const std::string filepath = dir+std::to_string(n_init);
+      s.read(filepath);
+    }
+  }
+  std::cout << "#starting from n_init = " << n_init << std::endl;
 
-  for(int n=ninit; n<Nconf; n++){
-
+  for(int n=n_init; n<Nconf; n++){
     // update
     for(int jj=0; jj<Nrepeat; jj++){
-      for(int ii=0; ii<Nheatbath; ii++) s.heatbath();
-      for(int ii=0; ii<Nwolff; ii++) s.wolff();
+      s.heatbath();
+      s.wolff();
     }
 
     // ckpoint
-    if( (n+1)%binsize==0 && if_write ) {
-      std::clog << "iter: " << n+1 << std::endl;
-
-      const std::string filepath = dir+"ckpoint"+std::to_string(label)+".dat";
-      s.ckpoint( filepath );
-    }
-
-
+    const std::string filepath = dir+std::to_string(n+1);
+    s.ckpoint( filepath );
   }
 
 

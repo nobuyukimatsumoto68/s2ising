@@ -273,37 +273,69 @@ public:
     return res;
   }
 
+  // void ckpoint( const std::string& str ) const {
+  //   std::ofstream of( str, std::ios::out | std::ios::app );
+  //   if(!of) assert(false);
+  //   for(Idx i=0; i<s.size(); i++) of << s[i];
+  //   of.close();
+  // }
 
+  // void read( const std::string& str ) {
+  //   std::ifstream ifs( str, std::ios::in );
+  //   if(!ifs) assert(false);
+
+  //   std::string st;
+  //   while (std::getline(ifs, st)){
+  //     std::istringstream iss(st);
+  //     int v;
+  //     Idx counter=0;
+  //     while( iss >> v ) {
+  //       s[counter] = v;
+  //       counter++;
+  //     }
+  //     assert(counter==s.size());
+  //   }
+  //   ifs.close();
+  // }
 
   void ckpoint( const std::string& str ) const {
-    std::ofstream of( str, std::ios::out | std::ios::binary | std::ios::trunc);
-    if(!of) assert(false);
+    {
+      std::ofstream of( str+".lat", std::ios::out | std::ios::binary | std::ios::trunc);
+      if(!of) assert(false);
 
-    bool tmp = 0;
-    // for(Idx i=0; i<Lx*Ly; i++){
-    for(Idx i=0; i<s.size(); i++){
-      tmp = s[i];
-      // std::cout << tmp << " ";
-      of.write( (char*) &tmp, sizeof(bool) );
+      bool tmp = 0;
+      for(Idx i=0; i<s.size(); i++){
+        tmp = s[i];
+        of.write( (char*) &tmp, sizeof(bool) );
+      }
+      of.close();
     }
-    // std::cout << std::endl;
-    of.close();
+    {
+      std::ofstream os( str+".rng", std::ios::out | std::ios::binary | std::ios::trunc );
+      if(!os) assert(false);
+      os << gen;
+      os.close();
+    }
   }
 
   void read( const std::string& str ) {
-    std::ifstream ifs( str, std::ios::in | std::ios::binary );
-    if(!ifs) assert(false);
+    {
+      std::ifstream ifs( str+".lat", std::ios::in | std::ios::binary );
+      if(!ifs) assert(false);
 
-    bool tmp;
-    // for(Idx i=0; i<Lx*Ly; ++i){
-    for(Idx i=0; i<s.size(); i++){
-      ifs.read((char*) &tmp, sizeof(bool) );
-      // std::cout << tmp << " ";
-      s[i] = tmp;
-      // (*this)[i] = tmp;
+      bool tmp;
+      for(Idx i=0; i<s.size(); i++){
+        ifs.read((char*) &tmp, sizeof(bool) );
+        s[i] = tmp;
+      }
+      ifs.close();
     }
-    // std::cout << std::endl;
-    ifs.close();
+    {
+      std::ifstream is( str+".rng", std::ios::in );
+      if(!is) assert(false);
+      is >> gen;
+      is.close();
+    }
   }
 
 
