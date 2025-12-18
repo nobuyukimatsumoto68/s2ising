@@ -110,11 +110,12 @@ int main(int argc, char* argv[]){
     // std::cout << "read from n_max = " << n_max << std::endl;
     const std::string filepath = dir+std::to_string(n);
     s.read(filepath);
-    std::cout << s.print() << std::endl;
+    // std::cout << s.print() << std::endl;
 
     Spin<N,N2> ss(ising);
     ss.s = s.s;
-    if(!ss[0]) ss.flip();
+    if(!ss.s[0]) ss.flip();
+    // std::cout << ss.print() << std::endl;
     for(Idx i=0; i<ss.s.size(); i++) ss_mean[i] += ss[i];
     //
     // ss corr -> s field
@@ -123,7 +124,18 @@ int main(int argc, char* argv[]){
   }
   for(Idx i=0; i<ss_mean.size(); i++) ss_mean[i] /= n_max;
 
-  for(Idx i=0; i<ss_mean.size(); i++) std::cout << ss_mean[i] << " ";
+  const V3 r0 = dual.vertices[0];
+  for(Idx i=0; i<ss_mean.size(); i++) {
+    const V3 r1 = dual.vertices[i];
+    double ell = arcLength( r0, r1 );
+    if(isnan(ell)){
+      std::cout << "# debug. ell = " << ell << std::endl;
+      std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
+      std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
+      ell = M_PI;
+    }
+    std::cout << ell << " " << ss_mean[i] << std::endl;
+  }
   std::cout << std::endl;
 
   return 0;

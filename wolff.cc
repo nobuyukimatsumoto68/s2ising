@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
   std::filesystem::create_directories( dir );
 
   const int Nrepeat = 100;
-  const int Nconf = 1e3;
+  const int Nconf = 1e4;
 
   // --------------------
 

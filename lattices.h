@@ -37,6 +37,7 @@ V3 circumcenter(const V3& r0, const V3& r1, const V3& r2){
 
 double arcLength( const V3& rA, const V3& rB ){
   const double AB = rA.dot(rB) / rA.norm() / rB.norm();
+  // if(std::abs(std::abs(AB)-M_PI)) return M_PI;
   return std::acos(AB);
 }
 
