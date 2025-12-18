@@ -138,10 +138,10 @@ public:
   Ising<N>& ising;
   const RefinedIcosahedronDual& dual;
 
-private:
+  // private:
   std::vector<bool> s;
 
-public:
+  // public:
   std::mt19937 gen;
   std::uniform_real_distribution<double> d01D; // (0.0, 1.0); // (1, 6);
   std::uniform_int_distribution<int> d01I; // (0, 1); // (1, 6);
@@ -154,7 +154,6 @@ public:
     const int si = s[i];
     return 2*si-1;
   }
-
 
   Spin() = delete;
 
