@@ -127,6 +127,70 @@ public:
 
 // };
 
+template<Idx N2>
+class SpinField {
+public:
+  std::vector<bool> s;
+
+  SpinField()
+    : s(N2)
+  {}
+
+  Idx size() const { return N2; }
+  inline bool operator[](const Idx i) const { return s[i]; }
+
+  int operator()(const Idx i) const {
+    const int si = s[i];
+    return 2*si-1;
+  }
+
+
+  inline void set1(const Idx i) { s[i] = 1; }
+  inline void set0(const Idx i) { s[i] = 0; }
+  inline void set(const Idx i, const bool c) { s[i] = c; }
+  void set1() { for(Idx i=0; i<size(); i++) set1(i); } // s[i] = 1; }
+  void set0() { for(Idx i=0; i<size(); i++) set0(i); } // s[i] = 1; }
+  inline void flip( const Idx i){ s[i] = !s[i]; }
+  void flip(){ for(Idx i=0; i<size(); i++) flip(i); }
+
+  void ckpoint( const std::string& str ) const {
+    {
+      std::ofstream of( str+".lat", std::ios::out | std::ios::binary | std::ios::trunc);
+      if(!of) assert(false);
+
+      bool tmp = 0;
+      for(Idx i=0; i<size(); i++){
+        tmp = s[i];
+        of.write( (char*) &tmp, sizeof(bool) );
+      }
+      of.close();
+    }
+  }
+
+  void read( const std::string& str ) {
+    {
+      std::ifstream ifs( str+".lat", std::ios::in | std::ios::binary );
+      if(!ifs) assert(false);
+
+      bool tmp;
+      for(Idx i=0; i<size(); i++){
+        ifs.read((char*) &tmp, sizeof(bool) );
+        s[i] = tmp;
+      }
+      ifs.close();
+    }
+  }
+
+  std::string print() const {
+    std::stringstream ss;
+    for(Idx i=0; i<size(); i++) ss << s[i];
+    return ss.str();
+  }
+
+
+
+};
+
 
 
 
@@ -139,7 +203,7 @@ public:
   const RefinedIcosahedronDual& dual;
 
   // private:
-  std::vector<bool> s;
+  SpinField<N2> s;
 
   // public:
   std::mt19937 gen;
@@ -150,17 +214,12 @@ public:
   Idx dist0N(){ return d0N(gen); }
   int dist01I(){ return d01I(gen); }
 
-  int operator[](const Idx i) const {
-    const int si = s[i];
-    return 2*si-1;
-  }
-
   Spin() = delete;
 
   Spin( Ising<N>& ising_, const int seed=0 )
     : ising(ising_)
     , dual(ising.loops.D.dual)
-    , s( dual.NVertices() )
+    , s()
     , d01D(0.0, 1.0)
     , d01I(0, 1)
     , d0N(0, dual.NVertices()-1)
@@ -169,62 +228,40 @@ public:
     std::mt19937 gen0( seed );
     gen.seed( gen0() );
     //
-    set1();
+    s.set1();
   }
 
-  void set1() {
-    for(Idx i=0; i<s.size(); i++){
-      s[i] = 1;
-    }
-  }
 
-  void set0() {
-    for(Idx i=0; i<s.size(); i++){
-      s[i] = 0;
-    }
-  }
-
-  void set1(const Idx i) { s[i] = 1; }
-  void set0(const Idx i) { s[i] = 0; }
-
-  void random() {
-    for(Idx i=0; i<s.size(); i++){
-      s[i] = dist01I();
-    }
-  }
+  // void random() {
+  //   for(Idx i=0; i<s.size(); i++){
+  //     s.s[i] = dist01I();
+  //   }
+  // }
 
   void set( const Idx q ){
     assert(0<=q && q<std::pow(2,N2));
     const Config c = Config(q);
     for(Idx i=0; i<s.size(); i++){
-      s[i] = c[i];
+      // s.s[i] = c[i];
+      s.set(i, c[i]);
     }
   }
 
-  void flip(){
-    for(Idx i=0; i<s.size(); i++){
-      s[i] = !s[i];
-    }
-  }
 
   void set_from_loop( const Idx q ){
     assert(0<=q && q<std::pow(2,N));
     ising.loops.set(q);
 
-    set0();
+    s.set0();
     for(const auto& loop : ising.loops){
       for(const Idx if1 : loop){
-        s[if1] = true;
+        // s.s[if1] = true;
+        s.set1(if1);
       }
     }
   }
 
 
-  std::string print() const {
-    std::stringstream ss;
-    for(Idx i=0; i<s.size(); i++) ss << s[i];
-    return ss.str();
-  }
 
   double S() const {
     double res = 0.0;
@@ -298,17 +335,7 @@ public:
   // }
 
   void ckpoint( const std::string& str ) const {
-    {
-      std::ofstream of( str+".lat", std::ios::out | std::ios::binary | std::ios::trunc);
-      if(!of) assert(false);
-
-      bool tmp = 0;
-      for(Idx i=0; i<s.size(); i++){
-        tmp = s[i];
-        of.write( (char*) &tmp, sizeof(bool) );
-      }
-      of.close();
-    }
+    s.ckpoint(str);
     {
       std::ofstream os( str+".rng", std::ios::out | std::ios::binary | std::ios::trunc );
       if(!os) assert(false);
@@ -318,17 +345,7 @@ public:
   }
 
   void read( const std::string& str ) {
-    {
-      std::ifstream ifs( str+".lat", std::ios::in | std::ios::binary );
-      if(!ifs) assert(false);
-
-      bool tmp;
-      for(Idx i=0; i<s.size(); i++){
-        ifs.read((char*) &tmp, sizeof(bool) );
-        s[i] = tmp;
-      }
-      ifs.close();
-    }
+    s.read(str);
     {
       std::ifstream is( str+".rng", std::ios::in );
       if(!is) assert(false);
@@ -347,7 +364,8 @@ public:
         FaceCoords f2;
         dual.shift( f2, dual.idx2FaceCoords( if1 ), df );
         // henv += ising.betas.at(DirectedLink{if1,df})*(*this)[dual.idx(f2)];
-        henv += ising.beta[dual.directedlinkidx(if1,df)] * (*this)[dual.idx(f2)];
+        // henv += ising.beta[dual.directedlinkidx(if1,df)] * (*this)[dual.idx(f2)];
+        henv += ising.beta[dual.directedlinkidx(if1,df)] * s(dual.idx(f2));
       }
 
       const double p = std::exp(2.0*henv);
@@ -357,9 +375,9 @@ public:
         // std::cout << "debug. p = " << p << std::endl;
         // std::cout << "debug. r0 = " << p/(1.0+p) << std::endl;
         // std::cout << "debug. r = " << r << std::endl;
-        set1(if1);
+        s.set1(if1);
       }
-      else set0(if1);
+      else s.set0(if1);
     }
   }
 
@@ -377,7 +395,9 @@ public:
 
       const Idx p = stack_idx.top();
       stack_idx.pop();
-      s[p] = !s[p]; // flip when visited
+
+      // s[p] = !s[p]; // flip when visited
+      s.flip(p);
 
       for(int df = 0; df<3; df++){
         FaceCoords f2;

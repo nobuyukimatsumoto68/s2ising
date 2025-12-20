@@ -50,6 +50,11 @@ using Complex = std::complex<double>;
 #include "loop.h"
 #include "ising.h"
 
+
+constexpr int nparallel = 4;
+
+#include "obs.h"
+
 constexpr int L = 2; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
@@ -65,11 +70,13 @@ int main(int argc, char* argv[]){
   std::cout << std::scientific << std::setprecision(25);
   std::clog << std::scientific << std::setprecision(25);
 
-  const int nparallel = 1;
   omp_set_num_threads(nparallel);
 
   int seed=0;
   if(argc>=2) seed = atoi(argv[1]);
+
+  bool is_correction=true;
+  if(argc>=3) is_correction = atoi(argv[2]);
 
 
   bool if_read = true;
@@ -90,11 +97,7 @@ int main(int argc, char* argv[]){
   DualSpinStructure spin(dual);
   Fermion D(spin);
   DualLoop<N> loop(D);
-  Ising ising(loop);
-
-
-  SpinField<N2> s;
-
+  // Ising ising(loop);
 
 
   FullIcosahedralGroup Ih( "multtablemathematica.dat",
@@ -118,48 +121,79 @@ int main(int argc, char* argv[]){
     n_max -= 1;
   }
 
+  using T1=Eigen::VectorXd;
+  using T2=SpinField<N2>;
 
-  std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
+  // Jackknife<T1,T2> obs(n_max-n_init+1);
+  Jackknife<T1,T2> obs;
+
+  {
+    T2 s;
+// #ifdef _OPENMP
+// #pragma omp parallel for num_threads(nparallel)
+// #endif
+    for(int n=n_init; n<=n_max; n++){
+      const std::string filepath = dir+std::to_string(n);
+      s.read(filepath);
+      obs.meas( s );
+    }
+  }
+
+  std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
+
 
   const Idx i0 = 0;
+  const T1 zero = T1::Zero( dual.NVertices() );
 
-  std::vector<double> ss_mean(s.size(), 0.0);
-  for(int n=n_init; n<=n_max; n++){
-    const std::string filepath = dir+std::to_string(n);
-    s.read(filepath);
+  auto f = [&](const std::vector<T2>& vs) {
+    T1 mean = zero;
+    std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
 
-    for(Idx if1=0; if1<dual.NVertices(); if1++){
-      const auto& b0_g = orbits.b0_g_pairs[if1];
-      Nsq_mean[b0_g.first] += s(if1) * s(orbits.antipodal[if1]);
+    for(Idx k=0; k<vs.size(); k++) {
+      T2 s = vs[k];
+
+      for(Idx if1=0; if1<dual.NVertices(); if1++){
+        const auto& b0_g = orbits.b0_g_pairs[if1];
+        Nsq_mean[b0_g.first] += s(if1) * s(orbits.antipodal[if1]);
+      }
+
+      for(Idx g=0; g<NIh; g++){
+        T2 ss = s;
+        if( !ss[orbits[i0][g]] ) ss.flip();
+
+        T1 tmp = zero;
+        for(Idx i=0; i<dual.NVertices(); i++) tmp[ i ] = ss( orbits[i][g] );
+        mean += tmp;
+      }
+    }
+    mean /= n_max * NIh;
+
+    if(is_correction){
+      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
+      const Idx b0 = orbits.b0_g_pairs[i0].first;
+      for(Idx i=0; i<dual.NVertices(); i++) {
+        const Idx b1 = orbits.b0_g_pairs[i].first;
+        const double norm = std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
+        mean[i] /= norm;
+      }
     }
 
-    for(Idx g=0; g<NIh; g++){
-      SpinField<N2> ss = s;
-      if(!ss[ orbits[i0][g] ]) ss.flip();
-      for(Idx i=0; i<ss.size(); i++) ss_mean[ i ] += ss( orbits[i][g] );
-    }
-  }
-  for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
-  for(Idx i=0; i<ss_mean.size(); i++) ss_mean[i] /= n_max * NIh;
+    return mean;
+  };
 
+  auto square = [](const T1& x) { return x.array().square().matrix(); };
 
+  const int binsize = obs.size()/10;
+  obs.do_it( f, square, zero, binsize );
 
-  std::cout << "# Nsq : " << std::endl << "# ";
-  for(Idx b0=0; b0<orbits.nbase(); b0++) {
-    std::cout << std::sqrt(Nsq_mean[b0]) << " ";
-  }
-  std::cout << std::endl;;
-
+  const T1 mean = obs.mean;
+  const T1 var = obs.var;
 
   std::cout << "# ss : " << std::endl;
   const V3 r0 = dual.vertices[i0];
   const Idx b0 = orbits.b0_g_pairs[i0].first;
-  for(Idx i=0; i<ss_mean.size(); i++) {
+  for(Idx i=0; i<dual.NVertices(); i++) {
     const Idx b1 = orbits.b0_g_pairs[i].first;
-
-    // const double norm = 1.0; // std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
-    const double norm = std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
-
     const V3 r1 = dual.vertices[i];
     double ell = arcLength( r0, r1 );
     if(isnan(ell)){
@@ -168,8 +202,7 @@ int main(int argc, char* argv[]){
       std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
       ell = M_PI;
     }
-    // std::cout << ell << " " << ss_mean[i]/norm << " " << std::sqrt(ss_var[i])/norm << std::endl;
-    std::cout << ell << " " << ss_mean[i]/norm << std::endl;
+    std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
   }
   std::cout << std::endl;
 
