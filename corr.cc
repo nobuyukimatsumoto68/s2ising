@@ -94,6 +94,18 @@ int main(int argc, char* argv[]){
   Spin<N, N2> s(ising,seed);
 
 
+
+
+  FullIcosahedralGroup Ih( "multtablemathematica.dat",
+                           3, 19, 60 );
+  Rotation rot;
+
+  Orbits orbits(dual.vertices,
+                dual.basePoints,
+                dual.baseTypes,
+                lattice, Ih, rot);
+
+
   int n_max=0;
   {
     for(n_max=1; n_max<Nconf; n_max++ ){
@@ -105,27 +117,62 @@ int main(int argc, char* argv[]){
     n_max -= 1;
   }
 
+
+  std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
+
+  const Idx i0 = 0;
+
   std::vector<double> ss_mean(s.s.size(), 0.0);
   for(int n=n_init; n<=n_max; n++){
-    // std::cout << "read from n_max = " << n_max << std::endl;
     const std::string filepath = dir+std::to_string(n);
     s.read(filepath);
-    // std::cout << s.print() << std::endl;
 
-    Spin<N,N2> ss(ising);
-    ss.s = s.s;
-    if(!ss.s[0]) ss.flip();
-    // std::cout << ss.print() << std::endl;
-    for(Idx i=0; i<ss.s.size(); i++) ss_mean[i] += ss[i];
-    //
-    // ss corr -> s field
-    // double object -> mean, var
-    // icos symmetry shuffle; avg
+    for(Idx if1=0; if1<dual.NVertices(); if1++){
+      const auto& b0_g = orbits.b0_g_pairs[if1];
+      Nsq_mean[b0_g.first] += s[if1]*s[orbits.antipodal[if1]];
+    }
+
+    for(Idx g=0; g<NIh; g++){
+      Spin<N,N2> ss(ising);
+      ss.s = s.s;
+      if(!ss.s[ orbits[i0][g] ]) ss.flip();
+      for(Idx i=0; i<ss.s.size(); i++) ss_mean[ i ] += ss[ orbits[i][g] ];
+    }
   }
-  for(Idx i=0; i<ss_mean.size(); i++) ss_mean[i] /= n_max;
+  for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
+  for(Idx i=0; i<ss_mean.size(); i++) ss_mean[i] /= n_max * NIh;
 
-  const V3 r0 = dual.vertices[0];
+
+  std::vector<double> ss_var(s.s.size(), 0.0);
+  for(int n=n_init; n<=n_max; n++){
+    const std::string filepath = dir+std::to_string(n);
+    s.read(filepath);
+
+    for(Idx g=0; g<NIh; g++){
+      Spin<N,N2> ss(ising);
+      ss.s = s.s;
+      if(!ss.s[ orbits[i0][g] ]) ss.flip();
+      for(Idx i=0; i<ss.s.size(); i++) ss_var[ i ] += std::pow(ss[ orbits[i][g] ]-ss_mean[i], 2);
+    }
+  }
+  for(Idx i=0; i<ss_var.size(); i++) ss_var[i] /= n_max * NIh;
+
+
+
+  std::cout << "# Nsq : " << std::endl << "# ";
+  for(Idx b0=0; b0<orbits.nbase(); b0++) {
+    std::cout << std::sqrt(Nsq_mean[b0]) << " ";
+  }
+  std::cout << std::endl;;
+
+
+  std::cout << "# ss : " << std::endl;
+  const V3 r0 = dual.vertices[i0];
+  const Idx b0 = orbits.b0_g_pairs[i0].first;
   for(Idx i=0; i<ss_mean.size(); i++) {
+    const Idx b1 = orbits.b0_g_pairs[i].first;
+    const double norm = 1.0; // std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
+
     const V3 r1 = dual.vertices[i];
     double ell = arcLength( r0, r1 );
     if(isnan(ell)){
@@ -134,10 +181,73 @@ int main(int argc, char* argv[]){
       std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
       ell = M_PI;
     }
-    std::cout << ell << " " << ss_mean[i] << std::endl;
+    std::cout << ell << " " << ss_mean[i]/norm << " " << std::sqrt(ss_var[i])/norm << std::endl;
   }
   std::cout << std::endl;
 
   return 0;
 }
 
+
+
+  // Fundamental = dual.basepoints
+  // antipodal normalization
+  // func find the corresp fund.
+
+  // std::cout << "debug. orbits = " << std::endl;
+  // std::cout << orbits.print() << std::endl;
+  // std::cout << "debug. fund = " << std::endl;
+  // for(const Idx elem : orbits.basePoints) std::cout << elem << " ";
+  // std::cout << std::endl;
+
+
+
+
+  // orbits.b0_g_pairs.clear();
+  // orbits.b0_g_pairs.resize(dual.NVertices());
+  // for(Idx if1=0; if1<dual.NVertices(); if1++){
+  //   const auto orbit = orbits[if1];
+  //   bool is_found = false;
+  //   for(Idx g=0; g<NIh; g++){
+  //     // for( const Idx b0 : orbits.basePoints ){
+  //     for(Idx b0=0; b0<orbits.basePoints.size(); b0++){
+  //       if(orbits.basePoints[b0]==orbit[g]) {
+  //         orbits.b0_g_pairs[if1] = std::pair<Idx,Idx>{b0,g};
+  //         is_found = true;
+  //         break;
+  //       }
+  //     }
+  //     if(is_found) break;
+  //   }
+  //   if(!is_found) {
+  //     std::cout << "debug. orbit = " << std::endl;
+  //     for(auto elem : orbit) std::cout << elem << " ";
+  //     std::cout << std::endl;
+  //     assert(false);
+  //   }
+  // } // end if1
+
+  // // std::cout << "debug. pairs = " << std::endl;
+  // // for(const auto& b0_g : orbits.b0_g_pairs) std::cout << b0_g.first << " " << b0_g.second << std::endl;
+  // // std::cout << "debug. b0_g.size = " << orbits.b0_g_pairs.size() << std::endl;
+
+  // orbits.npts.clear();
+  // orbits.npts.resize(orbits.basePoints.size());
+  // for(Idx& elem : orbits.npts) elem = 0;
+  // Idx counter=0;
+  // for(const auto& b0_g : orbits.b0_g_pairs) {
+  //   orbits.npts[b0_g.first]+=1;
+  //   counter++;
+  // }
+  // std::cout << "debug. counter = " << counter << std::endl;
+  // std::cout << "debug. npts = " << std::endl;
+  // for(Idx elem : orbits.npts) std::cout << elem << " ";
+  // std::cout << std::endl;
+
+  // Idx sum=0;
+  // for(Idx elem : orbits.npts) sum+=elem;
+  // std::cout << "debug. sum = " << sum << std::endl;
+  // std::cout << "debug. NVertices() = " << dual.NVertices() << std::endl;
+  // assert(sum==dual.NVertices());
+
+  // return 1;

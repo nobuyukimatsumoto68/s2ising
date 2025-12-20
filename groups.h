@@ -262,7 +262,7 @@ struct FullIcosahedralGroup {
 struct Orbits {
   Vertices& vertices; // reference
 
-  const BasePoints& basePoints;
+  const BasePoints& basePoints; // [b0] -> in
   const BaseTypes& baseTypes;
 
   const Icosahedron& icos;
@@ -272,6 +272,11 @@ struct Orbits {
 
   M3 ms, mt;
   std::vector<std::vector<Idx>> orbits;
+
+  std::vector<std::pair<Idx,Idx>> b0_g_pairs; // [if]
+  std::vector<Idx> npts; // [b0] // base pts idx
+
+  std::vector<Idx> antipodal; // [if]
 
   Orbits(Vertices& vertices_,
          const BasePoints& basePoints_,
@@ -288,6 +293,9 @@ struct Orbits {
     , Ih(Ih_)
     , rot(rot_)
     , nVertices(vertices.size())
+    , b0_g_pairs(vertices.size())
+    , npts(basePoints.size(), 0)
+    , antipodal(vertices.size())
   {
     {
       // s
@@ -315,7 +323,13 @@ struct Orbits {
     }
 
     GetOrbits();
+    GetFundPts();
+    GetAntipodal();
   }
+
+  Idx nbase() const { return npts.size(); }
+
+  auto operator[](const Idx i) const { return orbits[i]; }
 
   bool is_identical( const V3& x, const V3& y, const double tol=1.0e-12 ) const {
     const double norm = (x-y).norm();
@@ -347,7 +361,37 @@ struct Orbits {
     }
   }
 
-  void RefreshOrbits(){
+  void GetFundPts(){
+    for(Idx if1=0; if1<nVertices; if1++){
+      const auto& orbit = orbits[if1];
+      bool is_found = false;
+      for(Idx g=0; g<NIh; g++){
+        for(Idx b0=0; b0<basePoints.size(); b0++){
+          if(basePoints[b0]==orbit[g]) {
+            b0_g_pairs[if1] = std::pair<Idx,Idx>{b0,g};
+            is_found = true;
+            break;
+          }
+        }
+        if(is_found) break;
+      }
+      if(!is_found) assert(false);
+    } // end if1
+
+    for(const auto& b0_g : b0_g_pairs) npts[b0_g.first]++;
+    Idx sum=0;
+    for(Idx elem : npts) sum+=elem;
+    assert(sum==nVertices);
+  }
+
+  void GetAntipodal(){
+    for(Idx if1=0; if1<nVertices; if1++){
+      antipodal[if1] = orbits[if1][Ih.iu];
+    }
+  }
+
+
+  void RefreshOrbits(){ // for opt
     for(const Idx in : basePoints){
       const V3 r = vertices[in];
       const auto orbit = orbits[in];
