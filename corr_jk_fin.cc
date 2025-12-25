@@ -55,7 +55,7 @@ constexpr int nparallel = 4;
 
 #include "obs.h"
 
-constexpr int L = 2; // 4
+constexpr int L = 4; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -84,8 +84,9 @@ int main(int argc, char* argv[]){
   const std::string description = "L"+std::to_string(L);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
+  const std::string obsdir = "./obs_"+description+"/";
+  std::filesystem::create_directories( obsdir );
 
-  // const int Nrepeat = 100;
   const int Nconf = 1e5;
   const int n_init = 1e2;
 
@@ -97,11 +98,7 @@ int main(int argc, char* argv[]){
   DualSpinStructure spin(dual);
   Fermion D(spin);
   DualLoop<N> loop(D);
-  // Ising ising(loop);
-
-
-  FullIcosahedralGroup Ih( "multtablemathematica.dat",
-                           3, 19, 60 );
+  FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
   Rotation rot;
 
   Orbits orbits(dual.vertices,
@@ -123,8 +120,6 @@ int main(int argc, char* argv[]){
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
   Jackknife<T1,T2> obs;
 
   {
@@ -141,50 +136,41 @@ int main(int argc, char* argv[]){
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
 
-
   const Idx i0 = 0;
   const T1 zero = T1::Zero( dual.NVertices() );
 
-  auto f = [&](const std::vector<T2>& vs) {
-    T1 mean = zero;
-    std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
-
-    for(Idx k=0; k<vs.size(); k++) {
-      T2 s = vs[k];
-
-      for(Idx if1=0; if1<dual.NVertices(); if1++){
-        const auto& b0_g = orbits.b0_g_pairs[if1];
-        Nsq_mean[b0_g.first] += s(if1) * s(orbits.antipodal[if1]);
-      }
-
-      for(Idx g=0; g<NIh; g++){
-        T2 ss = s;
-        if( !ss[orbits[i0][g]] ) ss.flip();
-
-        T1 tmp = zero;
-        for(Idx i=0; i<dual.NVertices(); i++) tmp[ i ] = ss( orbits[i][g] );
-        mean += tmp;
-      }
-    }
-    mean /= n_max * NIh;
-
-    if(is_correction){
-      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
-      const Idx b0 = orbits.b0_g_pairs[i0].first;
-      for(Idx i=0; i<dual.NVertices(); i++) {
-        const Idx b1 = orbits.b0_g_pairs[i].first;
-        const double norm = std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
-        mean[i] /= norm;
-      }
-    }
-
-    return mean;
-  };
-
   auto square = [](const T1& x) { return x.array().square().matrix(); };
 
-  const int binsize = obs.size()/40;
-  obs.do_all( f, square, zero, binsize );
+  const int binsize = obs.size()/10;
+  obs.init( binsize );
+
+  int ibin_max;
+  for(ibin_max=0; ibin_max<obs.nbins; ibin_max++){
+    // check ckpoints
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin_max)+".dat";
+    const bool bool_corr = std::filesystem::exists(filepath);
+    if(!(bool_corr)) break;
+  }
+
+  std::cout << "# ibmax = " << ibin_max << std::endl;
+  assert(ibin_max==obs.nbins);
+
+  for(int ibin=0; ibin<obs.nbins; ibin++){
+    std::cout << "# debug. ibin = " << ibin << std::endl;
+    // const T1 jk_avg_corr = obs.jk_avg( ibin, f, square );
+    // std::cout << "# debug. jk_corr" << std::endl;
+    // for(double elem : jk_avg_corr) std::cout << elem << std::endl;
+    T1 jk_avg_corr = zero;
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin)+".dat";
+    obs.read( jk_avg_corr, filepath, jk_avg_corr.size() );
+    obs.jack_avg[ibin] = jk_avg_corr;
+    // write ckpoints
+  }
+
+  obs.finalize( square, zero );
+
+  // // in sep file
+  // read ckpoints
 
   const T1 mean = obs.mean;
   const T1 var = obs.var;

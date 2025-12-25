@@ -55,7 +55,7 @@ constexpr int nparallel = 4;
 
 #include "obs.h"
 
-constexpr int L = 2; // 4
+constexpr int L = 4; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -84,8 +84,9 @@ int main(int argc, char* argv[]){
   const std::string description = "L"+std::to_string(L);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
+  const std::string obsdir = "./obs_"+description+"/";
+  std::filesystem::create_directories( obsdir );
 
-  // const int Nrepeat = 100;
   const int Nconf = 1e5;
   const int n_init = 1e2;
 
@@ -97,11 +98,7 @@ int main(int argc, char* argv[]){
   DualSpinStructure spin(dual);
   Fermion D(spin);
   DualLoop<N> loop(D);
-  // Ising ising(loop);
-
-
-  FullIcosahedralGroup Ih( "multtablemathematica.dat",
-                           3, 19, 60 );
+  FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
   Rotation rot;
 
   Orbits orbits(dual.vertices,
@@ -123,8 +120,6 @@ int main(int argc, char* argv[]){
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
   Jackknife<T1,T2> obs;
 
   {
@@ -140,7 +135,6 @@ int main(int argc, char* argv[]){
   }
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
-
 
   const Idx i0 = 0;
   const T1 zero = T1::Zero( dual.NVertices() );
@@ -181,30 +175,55 @@ int main(int argc, char* argv[]){
     return mean;
   };
 
-  auto square = [](const T1& x) { return x.array().square().matrix(); };
+  // auto square = [](const T1& x) { return x.array().square().matrix(); };
 
-  const int binsize = obs.size()/40;
-  obs.do_all( f, square, zero, binsize );
+  const int binsize = obs.size()/10;
+  obs.init( binsize );
 
-  const T1 mean = obs.mean;
-  const T1 var = obs.var;
-
-  std::cout << "# ss : " << std::endl;
-  const V3 r0 = dual.vertices[i0];
-  const Idx b0 = orbits.b0_g_pairs[i0].first;
-  for(Idx i=0; i<dual.NVertices(); i++) {
-    const Idx b1 = orbits.b0_g_pairs[i].first;
-    const V3 r1 = dual.vertices[i];
-    double ell = arcLength( r0, r1 );
-    if(isnan(ell)){
-      std::cout << "# debug. ell = " << ell << std::endl;
-      std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
-      std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
-      ell = M_PI;
-    }
-    std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+  int ibin_min;
+  for(ibin_min=0; ibin_min<obs.nbins; ibin_min++){
+    // check ckpoints
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin_min)+".dat";
+    const bool bool_corr = std::filesystem::exists(filepath);
+    if(!(bool_corr)) break;
   }
-  std::cout << std::endl;
+
+  std::cout << "# starting from ibin = " << ibin_min << std::endl;
+
+  for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
+    std::cout << "# debug. ibin = " << ibin << std::endl;
+    const T1 jk_avg_corr = obs.jk_avg( ibin, f );
+    // std::cout << "# debug. jk_corr" << std::endl;
+    // for(double elem : jk_avg_corr) std::cout << elem << std::endl;
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin)+".dat";
+    obs.write( jk_avg_corr, filepath, jk_avg_corr.size() );
+    // write ckpoints
+  }
+
+  // // in sep file
+  // read ckpoints
+
+  // obs.do_it( f, square, zero, binsize );
+
+  // const T1 mean = obs.mean;
+  // const T1 var = obs.var;
+
+  // std::cout << "# ss : " << std::endl;
+  // const V3 r0 = dual.vertices[i0];
+  // const Idx b0 = orbits.b0_g_pairs[i0].first;
+  // for(Idx i=0; i<dual.NVertices(); i++) {
+  //   const Idx b1 = orbits.b0_g_pairs[i].first;
+  //   const V3 r1 = dual.vertices[i];
+  //   double ell = arcLength( r0, r1 );
+  //   if(isnan(ell)){
+  //     std::cout << "# debug. ell = " << ell << std::endl;
+  //     std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
+  //     std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
+  //     ell = M_PI;
+  //   }
+  //   std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+  // }
+  // std::cout << std::endl;
 
   return 0;
 }

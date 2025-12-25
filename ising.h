@@ -206,6 +206,69 @@ public:
     return ss.str();
   }
 
+  template<class T>
+  double eps_hat( const Idx if1, const T& ising ) const {
+    double res = 0.0;
+    const auto& dual = ising.dual;
+    const FaceCoords f1 = dual.idx2FaceCoords(if1);
+    for(int df=0; df<3; df++){
+      const Idx ell = dual.directedlinkidx(if1,df);
+      FaceCoords f2; dual.shift(f2, f1, df);
+      const Idx if2 = dual.idx(f2);
+
+      const double coeff = ising.dbeta_dmus[ell];
+      const double tanh = std::tanh( ising.beta[ell] );
+      const double ss = (*this)(if1)*(*this)(if2);
+      res += coeff*( -tanh + ss );
+    }
+    return res;
+  }
+
+  template<class T>
+  double K_hat( const Idx if1, const int mu, const T& ising ) const {
+    double res = 0.0;
+    const auto& dual = ising.dual;
+    const FaceCoords f1 = dual.idx2FaceCoords(if1);
+
+    const Idx ell = dual.directedlinkidx(if1,mu);
+    FaceCoords f2; dual.shift(f2, f1, mu);
+    const Idx if2 = dual.idx(f2);
+
+    const double coeff = ising.dbeta_dkappas[ell];
+    const double tanh = std::tanh( ising.beta[ell] );
+    const double ss = (*this)(if1)*(*this)(if2);
+    return coeff*( -tanh + ss );
+  }
+
+  template<class T>
+  double T_hat( const Idx if1, const int mu, const T& ising ) const {
+    const auto& dual = ising.dual;
+    const FaceCoords f1 = dual.idx2FaceCoords(if1);
+    FaceCoords f2; dual.shift(f2, f1, mu);
+    const Idx if2 = dual.idx(f2);
+
+    return K_hat(if1, mu, ising) - 0.5*(eps_hat(if1,ising)+eps_hat(if2,ising));
+  }
+
+  template<class T>
+  double trT( const Idx if1, const T& ising ) const {
+    std::vector<double> Ts(3);
+    std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    for(int mu=0; mu<3; mu++) {
+      Ts[mu] = T_hat(if1, mu, ising);
+      const double al_nu = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+1)%3)];
+      const double al_rho = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+2)%3)];
+      dalpha[mu] = M_PI+al_nu - al_rho;
+    }
+
+    double res = 0.0;
+    for(int mu=0; mu<3; mu++) {
+      const double factor = std::sin(dalpha[mu]) / std::sin(dalpha[(mu+1)%3]) / std::sin(dalpha[(mu+2)%3]);
+      res += factor * Ts[mu];
+    }
+
+    return res;
+  }
 
 
 };
