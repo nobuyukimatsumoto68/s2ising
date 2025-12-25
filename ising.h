@@ -17,6 +17,8 @@ public:
   std::map<const DirectedLink, const double> betas;
   std::vector<double> beta; // directedlinkidx
   // std::map<const Link, const double> As;
+  std::vector<double> dbeta_dmus; // directedlinkidx
+  std::vector<double> dbeta_dkappas; // directedlinkidx
 
   Ising( DualLoop<N>& loops_ )
     : loops(loops_)
@@ -27,6 +29,7 @@ public:
   {
     FillAugmentedTs();
     FillBetas();
+    FillDerivs();
   }
 
   void FillAugmentedTs(){
@@ -106,6 +109,22 @@ public:
       w_prod *= w;
     }
     return w_prod;
+  }
+
+
+  void FillDerivs(){
+    dbeta_dmus.clear();
+    dbeta_dkappas.clear();
+    dbeta_dmus.resize(dual.NDirectedLinks());
+    dbeta_dkappas.resize(dual.NDirectedLinks());
+    for(Idx iy=0; iy<dual.NVertices(); iy++){
+      for(int mu=0; mu<3; mu++){
+        double dbeta_dmu = -std::sinh( 2.0*betas.at(DirectedLink{iy,mu}) ) /4.0/D.mus[iy];
+        dbeta_dmus[dual.directedlinkidx(iy,mu)] = dbeta_dmu;
+
+        const double dbeta_dkappa = 0.5*std::sinh( 2.0*betas.at(DirectedLink{iy,mu}) ) /D.kappas[dual.directedlinkidx(iy,mu)];
+        dbeta_dkappas[dual.directedlinkidx(iy,mu)] = dbeta_dkappa;
+      }}
   }
 
 };
@@ -278,7 +297,7 @@ public:
       if(if1>=if2) continue;
 
       const double beta = ising.betas.at( ell );
-      const int prod = (*this)[ell.first]*(*this)[if2];
+      const int prod = s(ell.first)*s(if2);
       assert( prod*prod == 1 );
       res +=  beta * prod;
     }
@@ -301,7 +320,7 @@ public:
       if(if1>=if2) continue;
 
       const double beta = ising.betas.at( ell );
-      const int prod = (*this)[ell.first]*(*this)[if2];
+      const int prod = s(ell.first)*s(if2);
       assert( prod*prod == 1 );
       // std::cout << "debug. " << ell.first << " " << if2 << " tanh = " << std::tanh(beta) << std::endl;
       res *=  1.0 + std::tanh(beta) * prod;
