@@ -51,6 +51,15 @@ public:
     jack_avg.resize(nbins);
   }
 
+  void init( const int binsize_, const int nbins_ ){
+    this->binsize = binsize_;
+    this->nbins = nbins_;
+    this->N = binsize*nbins;
+    jack_avg.clear();
+    jack_avg.resize(nbins);
+  }
+
+
   void finalize( const std::function<T1(const T1&)> square,
                  const T1& zero ){
     assert(jack_avg.size()==nbins);

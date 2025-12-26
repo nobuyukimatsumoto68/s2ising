@@ -119,113 +119,57 @@ int main(int argc, char* argv[]){
   }
 
   using T1=Eigen::VectorXd;
+  // using T1=std::vector<double>; // Eigen::VectorXd;
   using T2=SpinField<N2>;
   Jackknife<T1,T2> obs;
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
-
-  {
-    T2 s;
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(nparallel)
-// #endif
-    for(int n=n_init; n<=n_max; n++){
-      const std::string filepath = dir+std::to_string(n);
-      s.read(filepath);
-      obs.meas( s );
-      // obs.meas( n, s );
-    }
-  }
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
 
   const Idx i0 = 0;
-  const T1 zero = T1::Zero( dual.NVertices() );
+  const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
 
-  auto f = [&](const std::vector<T2>& vs) {
-    T1 mean = zero;
-    std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
-
-    for(Idx k=0; k<vs.size(); k++) {
-      T2 s = vs[k];
-
-      for(Idx if1=0; if1<dual.NVertices(); if1++){
-        const auto& b0_g = orbits.b0_g_pairs[if1];
-        Nsq_mean[b0_g.first] += s(if1) * s(orbits.antipodal[if1]);
-      }
-
-      for(Idx g=0; g<NIh; g++){
-        T2 ss = s;
-        if( !ss[orbits[i0][g]] ) ss.flip();
-
-        T1 tmp = zero;
-        for(Idx i=0; i<dual.NVertices(); i++) tmp[ i ] = ss( orbits[i][g] );
-        mean += tmp;
-      }
-    }
-    mean /= n_max * NIh;
-
-    if(is_correction){
-      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
-      const Idx b0 = orbits.b0_g_pairs[i0].first;
-      for(Idx i=0; i<dual.NVertices(); i++) {
-        const Idx b1 = orbits.b0_g_pairs[i].first;
-        const double norm = std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
-        mean[i] /= norm;
-      }
-    }
-
-    return mean;
-  };
-
+  auto square = [](const T1& x) { return x.array().square().matrix(); };
 
   const int nbins = 10;
-  const int binsize = obs.size()/nbins;
-  obs.init( binsize );
+  const int binsize = (n_max-n_init+1)/nbins;
+  obs.init( binsize, nbins );
 
-  int ibin_min;
-  for(ibin_min=0; ibin_min<obs.nbins; ibin_min++){
+  int ibin_max;
+  for(ibin_max=0; ibin_max<obs.nbins; ibin_max++){
     // check ckpoints
-    const std::string filepath = obsdir+"corr_"+std::to_string(ibin_min)+".dat";
+    const std::string filepath = obsdir+"trT_"+std::to_string(ibin_max)+".dat";
     const bool bool_corr = std::filesystem::exists(filepath);
     if(!(bool_corr)) break;
   }
 
-  std::cout << "# starting from ibin = " << ibin_min << std::endl;
+  std::cout << "# ibmax = " << ibin_max << std::endl;
+  assert(ibin_max==obs.nbins);
 
-  for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
+  for(int ibin=0; ibin<obs.nbins; ibin++){
     std::cout << "# debug. ibin = " << ibin << std::endl;
-    const T1 jk_avg_corr = obs.jk_avg( ibin, f );
-    // std::cout << "# debug. jk_corr" << std::endl;
-    // for(double elem : jk_avg_corr) std::cout << elem << std::endl;
-    const std::string filepath = obsdir+"corr_"+std::to_string(ibin)+".dat";
-    obs.write( jk_avg_corr, filepath, jk_avg_corr.size() );
-    // write ckpoints
+    T1 jk_avg_corr = zero;
+    const std::string filepath = obsdir+"trT_"+std::to_string(ibin)+".dat";
+    obs.read( jk_avg_corr, filepath, jk_avg_corr.size() );
+    obs.jack_avg[ibin] = jk_avg_corr;
   }
 
-  // // in sep file
-  // read ckpoints
+  obs.finalize( square, zero );
 
-  // obs.do_it( f, square, zero, binsize );
+  const T1 mean = obs.mean;
+  const T1 var = obs.var;
 
-  // const T1 mean = obs.mean;
-  // const T1 var = obs.var;
-
-  // std::cout << "# ss : " << std::endl;
-  // const V3 r0 = dual.vertices[i0];
-  // const Idx b0 = orbits.b0_g_pairs[i0].first;
-  // for(Idx i=0; i<dual.NVertices(); i++) {
-  //   const Idx b1 = orbits.b0_g_pairs[i].first;
-  //   const V3 r1 = dual.vertices[i];
-  //   double ell = arcLength( r0, r1 );
-  //   if(isnan(ell)){
-  //     std::cout << "# debug. ell = " << ell << std::endl;
-  //     std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
-  //     std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
-  //     ell = M_PI;
-  //   }
-  //   std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
-  // }
-  // std::cout << std::endl;
+  {
+    const std::string filepath = obsdir+"trT_jk.dat";
+    std::ofstream os( filepath, std::ios::out | std::ios::trunc );
+    os << std::scientific << std::setprecision(25);
+    if(!os) assert(false);
+    std::cout << "# trT : " << std::endl;
+    for(Idx b0=0; b0<orbits.nbase(); b0++) {
+      std::cout << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
+      os << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
+    }
+    os.close();
+  }
 
   return 0;
 }

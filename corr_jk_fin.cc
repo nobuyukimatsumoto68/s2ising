@@ -122,17 +122,17 @@ int main(int argc, char* argv[]){
   using T2=SpinField<N2>;
   Jackknife<T1,T2> obs;
 
-  {
-    T2 s;
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(nparallel)
-// #endif
-    for(int n=n_init; n<=n_max; n++){
-      const std::string filepath = dir+std::to_string(n);
-      s.read(filepath);
-      obs.meas( s );
-    }
-  }
+//   {
+//     T2 s;
+// // #ifdef _OPENMP
+// // #pragma omp parallel for num_threads(nparallel)
+// // #endif
+//     for(int n=n_init; n<=n_max; n++){
+//       const std::string filepath = dir+std::to_string(n);
+//       s.read(filepath);
+//       obs.meas( s );
+//     }
+//   }
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
 
@@ -141,8 +141,9 @@ int main(int argc, char* argv[]){
 
   auto square = [](const T1& x) { return x.array().square().matrix(); };
 
-  const int binsize = obs.size()/10;
-  obs.init( binsize );
+  const int nbins = 10;
+  const int binsize = (n_max-n_init+1)/nbins;
+  obs.init( binsize, nbins );
 
   int ibin_max;
   for(ibin_max=0; ibin_max<obs.nbins; ibin_max++){
@@ -178,19 +179,28 @@ int main(int argc, char* argv[]){
   std::cout << "# ss : " << std::endl;
   const V3 r0 = dual.vertices[i0];
   const Idx b0 = orbits.b0_g_pairs[i0].first;
-  for(Idx i=0; i<dual.NVertices(); i++) {
-    const Idx b1 = orbits.b0_g_pairs[i].first;
-    const V3 r1 = dual.vertices[i];
-    double ell = arcLength( r0, r1 );
-    if(isnan(ell)){
-      std::cout << "# debug. ell = " << ell << std::endl;
-      std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
-      std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
-      ell = M_PI;
+
+  {
+    const std::string filepath = obsdir+"corr_jk.dat";
+    std::ofstream os( filepath, std::ios::out | std::ios::trunc );
+    os << std::scientific << std::setprecision(25);
+    if(!os) assert(false);
+
+    for(Idx i=0; i<dual.NVertices(); i++) {
+      const Idx b1 = orbits.b0_g_pairs[i].first;
+      const V3 r1 = dual.vertices[i];
+      double ell = arcLength( r0, r1 );
+      if(isnan(ell)){
+        std::cout << "# debug. ell = " << ell << std::endl;
+        std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
+        std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
+        ell = M_PI;
+      }
+      std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+      os << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
     }
-    std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+    os.close();
   }
-  std::cout << std::endl;
 
   return 0;
 }
