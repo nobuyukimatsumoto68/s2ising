@@ -55,7 +55,7 @@ using Complex = std::complex<double>;
 
 #include "obs.h"
 
-constexpr int L = 2; // 4
+constexpr int L = 8; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -81,7 +81,8 @@ int main(int argc, char* argv[]){
 
   bool if_read = true;
 
-  const std::string description = "L"+std::to_string(L);
+  int id=0;
+  const std::string description = "L"+std::to_string(L)+"_"+std::to_string(id);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
   const std::string obsdir = "./obs_"+description+"/";
@@ -98,7 +99,6 @@ int main(int argc, char* argv[]){
   DualSpinStructure spin(dual);
   Fermion D(spin);
   DualLoop<N> loop(D);
-  Ising ising(loop);
   FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
   Rotation rot;
 
@@ -140,20 +140,42 @@ int main(int argc, char* argv[]){
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
 
   const Idx i0 = 0;
-  const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
+  const T1 zero = T1::Zero( dual.NVertices() );
 
   auto f = [&](const std::vector<T2>& vs) {
-    T1 T_mean = zero;
+    T1 mean = zero;
+    std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
+
     for(Idx k=0; k<vs.size(); k++) {
-      const T2 s = vs[k];
+      T2 s = vs[k];
+
       for(Idx if1=0; if1<dual.NVertices(); if1++){
         const auto& b0_g = orbits.b0_g_pairs[if1];
-        T_mean[b0_g.first] += s.trT(if1, ising);
+        Nsq_mean[b0_g.first] += s(if1) * s(orbits.antipodal[if1]);
+      }
+
+      for(Idx g=0; g<NIh; g++){
+        T2 ss = s;
+        if( !ss[orbits[i0][g]] ) ss.flip();
+
+        T1 tmp = zero;
+        for(Idx i=0; i<dual.NVertices(); i++) tmp[ i ] = ss( orbits[i][g] );
+        mean += tmp;
       }
     }
-    for(Idx b0=0; b0<orbits.nbase(); b0++) T_mean[b0] /= n_max * orbits.npts[b0];
+    mean /= n_max * NIh;
 
-    return T_mean;
+    if(is_correction){
+      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
+      const Idx b0 = orbits.b0_g_pairs[i0].first;
+      for(Idx i=0; i<dual.NVertices(); i++) {
+        const Idx b1 = orbits.b0_g_pairs[i].first;
+        const double norm = std::sqrt( Nsq_mean[b0]*Nsq_mean[b1] ); // @@@
+        mean[i] /= norm;
+      }
+    }
+
+    return mean;
   };
 
 
@@ -164,7 +186,7 @@ int main(int argc, char* argv[]){
   int ibin_min;
   for(ibin_min=0; ibin_min<obs.nbins; ibin_min++){
     // check ckpoints
-    const std::string filepath = obsdir+"trT_"+std::to_string(ibin_min)+".dat";
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin_min)+".dat";
     const bool bool_corr = std::filesystem::exists(filepath);
     if(!(bool_corr)) break;
   }
@@ -174,10 +196,37 @@ int main(int argc, char* argv[]){
   for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
     std::cout << "# debug. ibin = " << ibin << std::endl;
     const T1 jk_avg_corr = obs.jk_avg( ibin, f );
-    const std::string filepath = obsdir+"trT_"+std::to_string(ibin)+".dat";
+    // std::cout << "# debug. jk_corr" << std::endl;
+    // for(double elem : jk_avg_corr) std::cout << elem << std::endl;
+    const std::string filepath = obsdir+"corr_"+std::to_string(ibin)+".dat";
     obs.write( jk_avg_corr, filepath, jk_avg_corr.size() );
+    // write ckpoints
   }
 
+  // // in sep file
+  // read ckpoints
+
+  // obs.do_it( f, square, zero, binsize );
+
+  // const T1 mean = obs.mean;
+  // const T1 var = obs.var;
+
+  // std::cout << "# ss : " << std::endl;
+  // const V3 r0 = dual.vertices[i0];
+  // const Idx b0 = orbits.b0_g_pairs[i0].first;
+  // for(Idx i=0; i<dual.NVertices(); i++) {
+  //   const Idx b1 = orbits.b0_g_pairs[i].first;
+  //   const V3 r1 = dual.vertices[i];
+  //   double ell = arcLength( r0, r1 );
+  //   if(isnan(ell)){
+  //     std::cout << "# debug. ell = " << ell << std::endl;
+  //     std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
+  //     std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
+  //     ell = M_PI;
+  //   }
+  //   std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+  // }
+  // std::cout << std::endl;
 
   return 0;
 }

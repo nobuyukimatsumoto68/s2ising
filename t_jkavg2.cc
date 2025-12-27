@@ -81,7 +81,8 @@ int main(int argc, char* argv[]){
 
   bool if_read = true;
 
-  const std::string description = "L"+std::to_string(L);
+  int id=0;
+  const std::string description = "L"+std::to_string(L)+"_"+std::to_string(id);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
   const std::string obsdir = "./obs_"+description+"/";

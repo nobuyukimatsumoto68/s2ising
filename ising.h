@@ -247,7 +247,9 @@ public:
     FaceCoords f2; dual.shift(f2, f1, mu);
     const Idx if2 = dual.idx(f2);
 
-    return K_hat(if1, mu, ising) - 0.5*(eps_hat(if1,ising)+eps_hat(if2,ising));
+    double res = K_hat(if1, mu, ising) - 0.5*(eps_hat(if1,ising)+eps_hat(if2,ising));
+    res *= dual.mean_ell / dual.ells[dual.directedlinkidx(if1, mu)];
+    return res;
   }
 
   template<class T>

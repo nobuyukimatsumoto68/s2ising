@@ -51,7 +51,7 @@ using Complex = std::complex<double>;
 #include "loop.h"
 #include "ising.h"
 
-constexpr int L = 16; // 4
+constexpr int L = 48; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
   std::filesystem::create_directories( dir );
 
   const int Nrepeat = 100;
-  const int Nconf = 4e5;
+  const int Nconf = 1e5;
 
   // --------------------
 

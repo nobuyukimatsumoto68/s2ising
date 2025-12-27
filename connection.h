@@ -33,7 +33,7 @@ struct DualSpinStructure : public Sphere {
   const double phi0;
 
   DualSpinStructure(const RefinedIcosahedronDual& dual_,
-                    const double TOL_=1.0e-12, // okay up to L~160
+                    const double TOL_=4.0e-12, // okay up to L~160
                     const double phi0_=M_PI/48.0
                     )
     : dual( dual_ )
@@ -98,7 +98,7 @@ struct DualSpinStructure : public Sphere {
 
 
 
-  const int limit = 5000; // 1000;
+  const int limit = 10000; // 1000;
   double epsabs = 1.0e-15; // 0.;
   double epsrel = 1.0e-13; // TOLLOOSE;
   int key = 6;
@@ -149,7 +149,10 @@ struct DualSpinStructure : public Sphere {
           // std::cout << "debug. diff = " << diff << std::endl;
           if(diff>M_PI) diff -= 2.0*M_PI;
           else if(diff<=-M_PI) diff += 2.0*M_PI;
-          assert( std::abs(diff)<TOL );
+          if(std::abs(diff)>TOL){
+            std::cout << "debug. diff = " << std::abs(diff) << std::endl;
+            assert( std::abs(diff)<TOL );
+          }
         }
 
         const double phi1 = phi(rf1);

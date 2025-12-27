@@ -55,7 +55,7 @@ using Complex = std::complex<double>;
 
 #include "obs.h"
 
-constexpr int L = 2; // 4
+constexpr int L = 32; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -81,13 +81,14 @@ int main(int argc, char* argv[]){
 
   bool if_read = true;
 
-  const std::string description = "L"+std::to_string(L);
+  int id=0;
+  const std::string description = "L"+std::to_string(L)+"_"+std::to_string(id);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
   const std::string obsdir = "./obs_"+description+"/";
   std::filesystem::create_directories( obsdir );
 
-  const int Nconf = 4e5;
+  const int Nconf = 1e5;
   const int n_init = 1e3;
 
   // --------------------

@@ -51,11 +51,12 @@ using Complex = std::complex<double>;
 #include "ising.h"
 
 
-constexpr int nparallel = 4;
+constexpr int nparallel = 1;
 
 #include "obs.h"
 
-constexpr int L = 4; // 4
+constexpr int Nconf = 4e5; // 32>=
+constexpr int L = 2; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]){
   std::cout << std::scientific << std::setprecision(25);
   std::clog << std::scientific << std::setprecision(25);
 
-  omp_set_num_threads(nparallel);
+  // omp_set_num_threads(nparallel);
 
   int seed=0;
   if(argc>=2) seed = atoi(argv[1]);
@@ -81,14 +82,14 @@ int main(int argc, char* argv[]){
 
   bool if_read = true;
 
-  const std::string description = "L"+std::to_string(L);
+  int id=0;
+  const std::string description = "L"+std::to_string(L)+"_"+std::to_string(id);
   const std::string dir = "./data_"+description+"/";
   std::filesystem::create_directories( dir );
   const std::string obsdir = "./obs_"+description+"/";
   std::filesystem::create_directories( obsdir );
 
-  const int Nconf = 1e5;
-  const int n_init = 1e2;
+  const int n_init = 1e3;
 
   // --------------------
 
@@ -107,16 +108,16 @@ int main(int argc, char* argv[]){
                 lattice, Ih, rot);
 
 
-  int n_max=0;
-  {
-    for(n_max=1; n_max<Nconf; n_max++ ){
-      const std::string filepath = dir+std::to_string(n_max);
-      const bool bool_lat = std::filesystem::exists(filepath+".lat");
-      const bool bool_rng = std::filesystem::exists(filepath+".rng");
-      if(!(bool_lat&&bool_rng)) break;
-    }
-    n_max -= 1;
-  }
+  int n_max=Nconf;
+  // {
+  //   for(n_max=1; n_max<Nconf; n_max++ ){
+  //     const std::string filepath = dir+std::to_string(n_max);
+  //     const bool bool_lat = std::filesystem::exists(filepath+".lat");
+  //     const bool bool_rng = std::filesystem::exists(filepath+".rng");
+  //     if(!(bool_lat&&bool_rng)) break;
+  //   }
+  //   n_max -= 1;
+  // }
 
   using T1=Eigen::VectorXd;
   // using T1=std::vector<double>; // Eigen::VectorXd;
@@ -124,6 +125,7 @@ int main(int argc, char* argv[]){
   Jackknife<T1,T2> obs;
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
+  std::cout << "# ell_mean = " << dual.mean_ell << std::endl;
 
   const Idx i0 = 0;
   const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
@@ -163,6 +165,7 @@ int main(int argc, char* argv[]){
     std::ofstream os( filepath, std::ios::out | std::ios::trunc );
     os << std::scientific << std::setprecision(25);
     if(!os) assert(false);
+    os << "# ell_mean = " << dual.mean_ell << std::endl;
     std::cout << "# trT : " << std::endl;
     for(Idx b0=0; b0<orbits.nbase(); b0++) {
       std::cout << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
