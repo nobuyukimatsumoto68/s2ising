@@ -28,6 +28,7 @@ using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
 
+constexpr int nparallel = 1;
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -38,10 +39,10 @@ using Complex = std::complex<double>;
 #include "connection.h"
 
 
+#include "fermion.h"
 
 // #include <omp.h>
 #include "loop.h"
-#include "fermion.h"
 
 constexpr int L = 4;
 constexpr Idx N = 10*L*L+2;
@@ -68,7 +69,7 @@ int main(int argc, char* argv[]){
   RefinedIcosahedronDual dual(lattice);
   DualSpinStructure spin(dual);
 
-  DualLoops<N> loops(dual);
+  // DualLoop<N> loops(dual);
 
   Fermion D(spin);
   FermionVector phi(dual);
@@ -78,10 +79,18 @@ int main(int argc, char* argv[]){
   std::cout << phi.print() << std::endl;
 
   Eigen::MatrixXcd Dmat = D.matrix();
-  Dmat *= 2.0 * dual.mean_ell;
+  // Dmat *= 2.0 * dual.mean_ell;
   // std::cout << Dmat.real() << std::endl;
   // std::cout << Dmat.imag() << std::endl;
   std::cout << Dmat.determinant() << std::endl;
+  auto inverse=Dmat.inverse();
+
+  // std::cout << inverse(0,0) << std::endl;
+  // std::cout << inverse(0,1) << std::endl;
+  // std::cout << inverse(1,0) << std::endl;
+  // std::cout << inverse(1,1) << std::endl;
+  std::cout << real( inverse(0,0)+inverse(1,1) ) << std::endl;
+
 
   // Eigen::VectorXcd v0(2*dual.NVertices());
   // v0[0] = 1.0;

@@ -31,7 +31,7 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
-
+constexpr int nparallel = 1;
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]){
         eps_mean[b0_g.first] += s.eps_hat(if1, ising);
       }
     }
-    for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= n_max * orbits.npts[b0];
+    for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= vs.size() * orbits.npts[b0];
 
     return eps_mean;
   };

@@ -163,10 +163,10 @@ int main(int argc, char* argv[]){
         mean += tmp;
       }
     }
-    mean /= n_max * NIh;
+    mean /= vs.size() * NIh;
 
     if(is_correction){
-      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= n_max * orbits.npts[b0];
+      for(Idx b0=0; b0<orbits.nbase(); b0++) Nsq_mean[b0] /= vs.size() * orbits.npts[b0];
       const Idx b0 = orbits.b0_g_pairs[i0].first;
       for(Idx i=0; i<dual.NVertices(); i++) {
         const Idx b1 = orbits.b0_g_pairs[i].first;
