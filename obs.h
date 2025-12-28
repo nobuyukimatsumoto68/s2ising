@@ -35,7 +35,7 @@ public:
   void meas( const Idx i, const T2& w ) { config[i] = w; }
 
   T1 jk_avg( const int i,
-               const std::function<T1(const std::vector<T2>&)> f ) const {
+             const std::function<T1(const std::vector<T2>&)> f ) const {
     std::vector<T2> vr = config;
     vr.erase( vr.begin()+N, vr.end() );
     vr.erase( vr.begin()+i*binsize, vr.begin()+(i+1)*binsize );
@@ -159,7 +159,7 @@ public:
   void meas( const Idx i, const T2& w ) { config[i] = w; }
 
   T1 get_bin_avg( const int i,
-              const std::function<T1(const std::vector<T2>&)> mean ) const {
+                  const std::function<T1(const std::vector<T2>&)> mean ) const {
     // std::vector<T2> vr (config.begin()+i*binsize, config.begin()+(i+1)*binsize );
     std::vector<T2> vr (&config[0]+i*binsize, &config[0]+(i+1)*binsize );
     assert( vr.size()==binsize );

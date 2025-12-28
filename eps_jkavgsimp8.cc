@@ -165,6 +165,9 @@ int main(int argc, char* argv[]){
                   return eps_mean;
                 };
 
+  std::cout << "# debug. mean = " << mean12( std::vector<T2>(&obs.config[0],&obs.config[0]+obs.size()) ) << std::endl;
+  return 1;
+
   auto mean11 = [&](const std::vector<T1>& vs) {
                   T1 mean = zero;
                   for(Idx k=0; k<vs.size(); k++) mean += vs[k];
