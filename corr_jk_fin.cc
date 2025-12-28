@@ -56,7 +56,7 @@ constexpr int nparallel = 1;
 #include "obs.h"
 
 constexpr int Nconf = 4e5;
-constexpr int L = 8; // 4
+constexpr int L = 16; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 

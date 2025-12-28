@@ -296,6 +296,7 @@ struct Orbits {
     , b0_g_pairs(vertices.size())
     , npts(basePoints.size(), 0)
     , antipodal(vertices.size())
+    , orbits(vertices.size(), std::vector<Idx>(NIh))
   {
     {
       // s
@@ -337,18 +338,26 @@ struct Orbits {
   }
 
   void GetOrbits(){
-    orbits.clear();
-    for(const V3& x : vertices){
-      std::vector<Idx> orbit;
+    // orbits.clear();
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
+    for(Idx ix=0; ix<vertices.size(); ix++){
+      // std::cout << "# debug. ix = " << ix << std::endl;
+      const V3& x = vertices[ix];
+      // for(const V3& x : vertices){
+      std::vector<Idx>& orbit = orbits[ix]; //(NIh);
 
       for(int ig=0; ig<NIh; ig++){
-        const M3 mg = Ih.rotation(ig, ms, mt);
-        const V3 gx = mg*x;
+        // const M3 mg = Ih.rotation(ig, ms, mt);
+        // const V3 gx = mg*x;
+        const V3 gx = Ih.rotation(ig, ms, mt)*x;
 
         for(Idx iy=0; iy<nVertices; iy++){
-          const V3 y = vertices[iy];
+          const V3& y = vertices[iy];
           if( is_identical(gx, y) ) {
-            orbit.push_back(iy);
+            // orbit.push_back(iy);
+            orbit[ig]=iy;
             break;
           }
         }
@@ -356,9 +365,9 @@ struct Orbits {
 
       // std::cout << "debug. x = " << x.transpose() << std::endl;
       // std::cout << "debug. orbit.size() = " << orbit.size() << std::endl;
-      assert( orbit.size()==NIh );
-      orbits.push_back(orbit);
-    }
+      // assert( orbit.size()==NIh );
+      // orbits[ix]=orbit;
+    } // for ix
   }
 
   void GetFundPts(){

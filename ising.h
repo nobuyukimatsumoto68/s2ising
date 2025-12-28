@@ -221,6 +221,8 @@ public:
       const double ss = (*this)(if1)*(*this)(if2);
       res += coeff*( -tanh + ss );
     }
+    res += 1.0;
+    res *= -1.0;
     return res;
   }
 

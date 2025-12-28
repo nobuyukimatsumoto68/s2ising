@@ -32,6 +32,8 @@ using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
 
+constexpr int nparallel = 1;
+
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -51,12 +53,10 @@ using Complex = std::complex<double>;
 #include "ising.h"
 
 
-constexpr int nparallel = 1;
-
 #include "obs.h"
 
-constexpr int Nconf = 1e5; // 32>=
-constexpr int L = 64; // 4
+constexpr int Nconf = 4e5; // 32>=
+constexpr int L = 2; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]){
   std::cout << std::scientific << std::setprecision(25);
   std::clog << std::scientific << std::setprecision(25);
 
-  // omp_set_num_threads(nparallel);
+  omp_set_num_threads(nparallel);
 
   int seed=0;
   if(argc>=2) seed = atoi(argv[1]);
@@ -95,17 +95,27 @@ int main(int argc, char* argv[]){
 
   RefinedIcosahedron lattice(L);
   assert(lattice.NVertices()==N);
+  std::cout << "# debug. lattice set." << std::endl;
   RefinedIcosahedronDual dual(lattice);
+  std::cout << "# debug. dual lattice set." << std::endl;
   DualSpinStructure spin(dual);
+  std::cout << "# debug. spin set." << std::endl;
   Fermion D(spin);
+  std::cout << "# debug. D set." << std::endl;
   DualLoop<N> loop(D);
+  std::cout << "# debug. loop set." << std::endl;
   FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
+  std::cout << "# debug. Ih set." << std::endl;
   Rotation rot;
+  std::cout << "# debug. rot set." << std::endl;
 
   Orbits orbits(dual.vertices,
                 dual.basePoints,
                 dual.baseTypes,
                 lattice, Ih, rot);
+
+  std::cout << "# orbits. rot set." << std::endl;
+  // return 1;
 
 
   int n_max=Nconf;
@@ -139,7 +149,7 @@ int main(int argc, char* argv[]){
   int ibin_max;
   for(ibin_max=0; ibin_max<obs.nbins; ibin_max++){
     // check ckpoints
-    const std::string filepath = obsdir+"trT_"+std::to_string(ibin_max)+".dat";
+    const std::string filepath = obsdir+"eps_"+std::to_string(ibin_max)+".dat";
     const bool bool_corr = std::filesystem::exists(filepath);
     if(!(bool_corr)) break;
   }
@@ -150,7 +160,7 @@ int main(int argc, char* argv[]){
   for(int ibin=0; ibin<obs.nbins; ibin++){
     std::cout << "# debug. ibin = " << ibin << std::endl;
     T1 jk_avg_corr = zero;
-    const std::string filepath = obsdir+"trT_"+std::to_string(ibin)+".dat";
+    const std::string filepath = obsdir+"eps_"+std::to_string(ibin)+".dat";
     obs.read( jk_avg_corr, filepath, jk_avg_corr.size() );
     obs.jack_avg[ibin] = jk_avg_corr;
   }
@@ -161,12 +171,12 @@ int main(int argc, char* argv[]){
   const T1 var = obs.var;
 
   {
-    const std::string filepath = obsdir+"trT_jk.dat";
+    const std::string filepath = obsdir+"eps_jk.dat";
     std::ofstream os( filepath, std::ios::out | std::ios::trunc );
     os << std::scientific << std::setprecision(25);
     if(!os) assert(false);
     os << "# ell_mean = " << dual.mean_ell << std::endl;
-    std::cout << "# trT : " << std::endl;
+    std::cout << "# eps : " << std::endl;
     for(Idx b0=0; b0<orbits.nbase(); b0++) {
       std::cout << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
       os << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
