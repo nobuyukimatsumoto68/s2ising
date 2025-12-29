@@ -104,7 +104,7 @@ int main(int argc, char* argv[]){
       if( if1==k || if2==k ) sign = -1;
       prod *= 1.0 + sign*std::tanh(beta);
     }
-    std::cout << "prod = " << prod << std::endl;
+    // std::cout << "prod = " << prod << std::endl;
   }
  
   { // this will only modify q loop
@@ -114,10 +114,15 @@ int main(int argc, char* argv[]){
 
     double prod = 0.0;
     double sum = 0.0;
+    double sum2 = 0.0;
+    double sum3 = 0.0;
     for(Idx q1=0; q1<std::pow(2,N2); q1++){
       s.set( q1 );
       prod += s.weight();
       sum += std::exp(s.S());
+      double eps = s.s.eps_hat(0, ising);
+      sum2 += eps*std::exp(s.S());
+      sum3 += s.s(0)*s.s(1) * std::exp(s.S());
       // std::cout << ising.eval_loop( q ) << std::endl;
       // break;
     }
@@ -140,8 +145,12 @@ int main(int argc, char* argv[]){
 
     // std::cout << "debug. prod = " << prod << std::endl;
     // std::cout << "debug. sum = " << sum << std::endl;
-    std::cout << "Z (ising, prod) = " << prod/std::pow(2,N2) << std::endl;
-    std::cout << "Z (ising, sum) = " << sum/factor << std::endl;
+    // std::cout << "Z (ising, prod) = " << prod/std::pow(2,N2) << std::endl;
+    // std::cout << "Z (ising, sum) = " << sum/factor << std::endl;
+    std::cout << "<eps> = " << sum2/sum << std::endl;
+    // std::cout << "<E> = " << sum3/sum << std::endl;
+    // std::cout << "dbeta_dmu = " << ising.dbeta_dmus[0] << std::endl;
+    // std::cout << "tanh = " << std::tanh( ising.beta[0] ) << std::endl;
   }
   // {
   //   double sum = 0.0;
@@ -173,198 +182,49 @@ int main(int argc, char* argv[]){
       }
       if(!is_have0) zeps += w;
     }
-    std::cout << "Z (loop) = " << zloop/2.0 << std::endl;
-    std::cout << "Z eps = " << zeps/2.0 << std::endl;
-    std::cout << "<eps> = " << zeps/zloop << std::endl;
-    std::cout << "mu = " << D.mus[0] << std::endl;
-
-    // double prod_mu = 1.0;
-    // for(auto mu : D.mus) prod_mu *= mu;
-
-    // zloop *= prod_mu / 2.0;
-    // std::cout << "Z (multed) = " << zloop << std::endl;
+    // std::cout << "Z (loop) = " << zloop/2.0 << std::endl;
+    // std::cout << "Z eps = " << zeps/2.0 << std::endl;
+    // std::cout << "<eps> = " << zeps/zloop << std::endl;
+    // std::cout << "mu = " << D.mus[0] << std::endl;
+    std::cout << "<eps>/mu = " << -0.5*zeps/zloop/D.mus[0]*2.0 << std::endl;
   }
 
+  // std::cout << "Pf. numerical deriv" << std::endl;
   {
     auto matD = D.matrix();
-    std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() ) << std::endl;
-  }
+    double prod_mu = 1.0;
+    for(auto mu : D.mus) prod_mu *= mu;
 
-  // {
-  //   DualLoop<N> loop(D);
-  //   Ising ising(loop);
-  //   Spin<N, N2> s(ising);
-  //   s.random();
-  //   std::cout << "s = " << s.print() << std::endl;
-  //   s.ckpoint("check.dat");
-  //   s.set0();
-  //   std::cout << "s0 = " << s.print() << std::endl;
-  //   s.read("check.dat");
-  //   std::cout << "s = " << s.print() << std::endl;
-  // }
+    // std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() )/prod_mu << std::endl;
+
+    auto inverse=matD.inverse();
+    std::cout << "from inv = " << 0.5*real( inverse(0,0)+inverse(1,1) ) << std::endl;
+  }
+  const double eta = 1.0e-6;
+  double zp, zm;
+  {
+    D.mus[0] += eta;
+    auto matD = D.matrix();
+    double prod_mu = 1.0;
+    for(auto mu : D.mus) prod_mu *= mu;
+
+    zp = std::sqrt( matD.determinant().real() )/prod_mu;
+    // std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() )/prod_mu << std::endl;
+  }
+  {
+    D.mus[0] -= 2.0*eta;
+    auto matD = D.matrix();
+    double prod_mu = 1.0;
+    for(auto mu : D.mus) prod_mu *= mu;
+
+    zm = std::sqrt( matD.determinant().real() )/prod_mu;
+    // std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() )/prod_mu << std::endl;
+  }
+  // std::cout << "deriv = " << (std::log(zp)-std::log(zm))/(2.0*eta) << std::endl;
+  std::cout << "1/mu+deriv = " << 1.0/D.mus[0]+(std::log(zp)-std::log(zm))/(2.0*eta) << std::endl;
+
 
   return 0;
 }
 
 
-
-
-
-
-  // {
-  //   DualLoop<N> loops(D);
-  //   loops.set( q );
-  //   std::cout << loops.printLoops() << std::endl;
-
-  //   for(const auto& loop : loops){
-  //     for(Idx i=0; i<loop.size(); i++){
-  //       const Idx if1 = loop[i];
-  //       const Idx if2 = loop[(i+1)%loop.size()];
-  //       const int df = dual.getDirection.at( Link{if1, if2} );
-  //       D.kappas[ dual.directedlinkidx(if1, df) ] = 1.0;
-  //     }
-  //   }
-  // }
-
-  // {
-  //   DualLoop<N> loop(D);
-  //   Ising ising(loop);
-
-  //   double prod = 1.0;
-  //   for(Idx il=0; il<2*dual.NLinks(); il++){
-  //     const DirectedLink ell = dual.directedlinkidx2DirectedLink( il );
-  //     const Idx if1 = ell.first;
-  //     const int df = ell.second;
-  //     FaceCoords f1 = dual.idx2FaceCoords( if1 );
-  //     if(f1[3]!=XZ) continue;
-  //     const double beta = ising.betas.at( ell );
-  //     FaceCoords f2;
-  //     dual.shift(f2, f1, df);
-  //     const Idx if2 = dual.idx(f2);
-  //     int sign = 1;
-  //     if( if1==k || if2==k ) sign = -1;
-  //     prod *= 1.0 + sign*std::tanh(beta);
-  //   }
-  //   std::cout << "prod = " << prod << std::endl;
-  // }
-  // //
-
-  // // {
-  // //   DualLoop<N> loop(D);
-  // //   Ising ising(loop);
-  // //   Spin<N, N2> s(ising);
-
-  // //   s.set_from_loop( 5 );
-  // //   std::cout << "dual :" << s.ising.loops.config() << std::endl;
-  // //   std::cout << "loops :" << s.ising.loops.printLoops() << std::endl;
-  // //   std::cout << "spin :" << s.print() << std::endl;
-  // // }
-
-  // {
-  //   DualLoop<N> loop(D);
-  //   Ising ising(loop);
-  //   Spin<N, N2> s(ising);
-
-  //   // double sum = 0.0;
-  //   double prod = 0.0;
-  //   for(Idx q1=0; q1<std::pow(2,N2); q1++){
-  //   // for(Idx q=0; q<std::pow(2,0); q++){
-  //   // {
-  //     // Idx q = std::pow(2,k);
-  //     s.set( q1 );
-  //     // std::cout << s.print() << std::endl;
-  //     // std::cout << s.S() << std::endl;
-  //     // sum += std::exp( s.S() );
-
-  //     prod += s.weight();
-  //     // prod += s[0]*s[1] * s.weight();
-
-  //     // double w1 = s.weight();
-  //     // s.flip();
-  //     // double w2 = s.weight();
-  //     // prod += w1+w2;
-  //     // if( std::abs(w1-w2)<1.0e-14 ) counter++;
-  //   }
-  //   // std::cout << "debug. sum = " << sum << std::endl;
-  //   std::cout << "debug. prod = " << prod << std::endl;
-  //   std::cout << "Z (ising, prod) = " << prod/std::pow(2,N2) << std::endl;
-
-  //   // double factor = 1.0;
-  //   // for(Idx il=0; il<2*dual.NLinks(); il++){
-  //   //   const DirectedLink ell = dual.linkidx2DirectedLink( il );
-  //   //   FaceCoords f = dual.idx2FaceCoords( ell.first );
-  //   //   if(f[3]!=XZ) continue;
-  //   //   const double beta = ising.betas.at( ell );
-  //   //   factor *= std::cosh(beta);
-  //   // }
-  //   // factor *= std::pow(2,N2);
-  //   // std::cout << "Z (ising) = " << sum/factor << std::endl;
-  // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // // dual loop expansion double counts
-  // {
-  //   std::vector<double> ws( std::pow(2,N) );
-
-  //   const Idx nloops = std::pow(2,N);
-  //   // for(Idx q=0; q<nloops; q++){
-  //   {
-  //     // Idx q=0;
-  //     DualLoop<N> loop(D);
-
-  //     loop.set( q );
-  //     if(std::abs(loop.eval()-loop.eval_prod())>1.0e-9){
-  //       std::cout << loop.eval()
-  //                 << " "
-  //                 << loop.eval_()
-  //                 << " "
-  //                 << loop.eval_prod()
-  //                 << std::endl;
-  //     }
-  //     // ws[q] = loop.eval();
-  //     ws[q] = loop.eval_();
-  //     // ws[q] = loop.eval_prod();
-  //     // if(ws[q]<0.0){
-  //     //   std::cout << "idx = " << loop() << std::endl;
-  //     //   std::cout << "config = " << loop.config() << std::endl;
-  //     //   std::cout << "loop = " << std::endl;
-  //     //   std::cout << loop.printLoops() << std::endl;
-  //     // }
-  //   }
-
-  //   double zloop = 0.0;
-  //   for(Idx q1=0; q1<nloops; q1++){
-  //     zloop += ws[q1];
-  //     // std::cout << q << " " << ws[q] << std::endl;
-  //   }
-  //   std::cout << "Z (loop) = " << zloop/2.0 << std::endl;
-
-  //   // double prod_mu = 1.0;
-  //   // for(auto mu : D.mus) prod_mu *= mu;
-
-  //   // zloop *= prod_mu / 2.0;
-  //   // std::cout << "Z (multed) = " << zloop << std::endl;
-  // }
-
-  // {
-  //   auto matD = D.matrix();
-  //   std::cout << "Z (Pf) = " << std::sqrt( matD.determinant().real() ) << std::endl;
-  // }
