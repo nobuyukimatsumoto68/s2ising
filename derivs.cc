@@ -31,7 +31,7 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
-
+const int nparallel = 12;
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -65,7 +65,6 @@ int main(int argc, char* argv[]){
   std::cout << std::scientific << std::setprecision(25);
   std::clog << std::scientific << std::setprecision(25);
 
-  const int nparallel = 12;
   omp_set_num_threads(nparallel);
 
   int k=0;

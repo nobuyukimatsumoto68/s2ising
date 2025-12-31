@@ -267,7 +267,7 @@ public:
 
     double res = 0.0;
     for(int mu=0; mu<3; mu++) {
-      const double factor = std::sin(dalpha[mu]) / std::sin(dalpha[(mu+1)%3]) / std::sin(dalpha[(mu+2)%3]);
+      const double factor = std::cos(dalpha[mu]) / std::sin(dalpha[(mu+1)%3]) / std::sin(dalpha[(mu+2)%3]);
       res += factor * Ts[mu];
     }
 
