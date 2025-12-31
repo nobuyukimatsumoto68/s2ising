@@ -31,7 +31,9 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
+
 constexpr int nparallel = 1;
+
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -51,7 +53,6 @@ constexpr int nparallel = 1;
 #include "ising.h"
 
 
-// constexpr int nparallel = 1;
 
 #include "obs.h"
 
@@ -103,81 +104,128 @@ int main(int argc, char* argv[]){
   FullIcosahedralGroup Ih( "multtablemathematica.dat", 3, 19, 60 );
   Rotation rot;
 
+  std::cout << "# rot " << std::endl;
+
   Orbits orbits(dual.vertices,
                 dual.basePoints,
                 dual.baseTypes,
                 lattice, Ih, rot);
 
+  std::cout << "# orbits " << std::endl;
 
-  int n_max=0;
-  {
-    for(n_max=1; n_max<Nconf; n_max++ ){
-      const std::string filepath = dir+std::to_string(n_max);
-      const bool bool_lat = std::filesystem::exists(filepath+".lat");
-      const bool bool_rng = std::filesystem::exists(filepath+".rng");
-      if(!(bool_lat&&bool_rng)) break;
-    }
-    n_max -= 1;
-  }
+  int n_max=Nconf;
+  // {
+  //   for(n_max=1; n_max<Nconf; n_max++ ){
+  //     const std::string filepath = dir+std::to_string(n_max);
+  //     const bool bool_lat = std::filesystem::exists(filepath+".lat");
+  //     // const bool bool_rng = std::filesystem::exists(filepath+".rng");
+  //     // if(!(bool_lat&&bool_rng)) break;
+  //     if(!(bool_lat)) break;
+  //   }
+  //   n_max -= 1;
+  // }
+
+  std::cout << "# checked " << std::endl;
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-  Jackknife<T1,T2> obs;
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
+  // JackknifeSimp<T1,T2> obs;
+  JackknifeSimp<T1,T2> obs(n_max-n_init+1);
 
+  std::cout << "# reading " << std::endl;
   {
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(nparallel)
-// #endif
+    T2 s;
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
     for(int n=n_init; n<=n_max; n++){
-      T2 s;
       const std::string filepath = dir+std::to_string(n);
       s.read(filepath);
-      obs.meas( s );
-      // obs.meas( n, s );
+      // obs.meas( s );
+      obs.meas( n-n_init, s );
     }
   }
 
   std::cout << "# MEAS FINISHED. LEN = " << obs.size() << std::endl;
+  std::cout << "# ell_mean = " << dual.mean_ell << std::endl;
 
   const Idx i0 = 0;
   const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
 
-  auto f = [&](const std::vector<T2>& vs) {
-    T1 eps_mean = zero;
-    for(Idx k=0; k<vs.size(); k++) {
-      const T2& s = vs[k];
-      for(Idx if1=0; if1<dual.NVertices(); if1++){
-        const auto& b0_g = orbits.b0_g_pairs[if1];
-        eps_mean[b0_g.first] += s.eps_hat(if1, ising);
-      }
-    }
-    for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0*vs.size() * orbits.npts[b0];
+  auto mean12 = [&](const std::vector<T2>& vs) {
+                  T1 eps_mean = zero;
+                  for(Idx k=0; k<vs.size(); k++) {
+                    const T2 s = vs[k];
+                    for(Idx if1=0; if1<dual.NVertices(); if1++){
+                      const auto& b0_g = orbits.b0_g_pairs[if1];
+                      eps_mean[b0_g.first] += s.eps_hat(if1, ising);
+                    }
+                  }
+                  for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * vs.size() * orbits.npts[b0];
 
-    return eps_mean;
-  };
+                  return eps_mean;
+                };
+
+  auto mean11 = [&](const std::vector<T1>& vs) {
+                  T1 mean = zero;
+                  for(Idx k=0; k<vs.size(); k++) mean += vs[k];
+                  mean /= 1.0 * vs.size();
+                  return mean;
+                };
+
+  auto square = [](const T1& x) { return x.array().square().matrix(); };
+
 
 
   const int nbins = 10;
   const int binsize = obs.size()/nbins;
   obs.init( binsize );
 
-  int ibin_min;
-  for(ibin_min=0; ibin_min<obs.nbins; ibin_min++){
-    // check ckpoints
-    const std::string filepath = obsdir+"eps_"+std::to_string(ibin_min)+".dat";
-    const bool bool_corr = std::filesystem::exists(filepath);
-    if(!(bool_corr)) break;
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
+  for(int ibin=0; ibin<obs.nbins; ibin++) {
+    std::cout << "# ibin = " << ibin << std::endl;
+    obs.bin_avg[ibin] = obs.get_bin_avg(ibin, mean12);
+  }
+  for(int ibin=0; ibin<obs.nbins; ibin++) obs.jack_avg[ibin] = obs.jk_avg(ibin, mean11);
+  obs.finalize(square, zero);
+
+  const T1 mean = obs.mean;
+  const T1 var = obs.var;
+
+  {
+    const std::string filepath = obsdir+"eps_jk.dat";
+    std::ofstream os( filepath, std::ios::out | std::ios::trunc );
+    os << std::scientific << std::setprecision(25);
+    if(!os) assert(false);
+    os << "# ell_mean = " << dual.mean_ell << std::endl;
+    std::cout << "# eps : " << std::endl;
+    for(Idx b0=0; b0<orbits.nbase(); b0++) {
+      std::cout << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
+      os << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
+    }
+    os.close();
   }
 
-  std::cout << "# starting from ibin = " << ibin_min << std::endl;
 
-  for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
-    std::cout << "# debug. ibin = " << ibin << std::endl;
-    const T1 jk_avg_corr = obs.jk_avg( ibin, f );
-    const std::string filepath = obsdir+"eps_"+std::to_string(ibin)+".dat";
-    obs.write( jk_avg_corr, filepath, jk_avg_corr.size() );
-  }
+  // int ibin_min;
+  // for(ibin_min=0; ibin_min<obs.nbins; ibin_min++){
+  //   // check ckpoints
+  //   const std::string filepath = obsdir+"eps_"+std::to_string(ibin_min)+".dat";
+  //   const bool bool_corr = std::filesystem::exists(filepath);
+  //   if(!(bool_corr)) break;
+  // }
+
+  // std::cout << "# starting from ibin = " << ibin_min << std::endl;
+  // for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
+  //   std::cout << "# debug. ibin = " << ibin << std::endl;
+  //   const T1 jk_avg_corr = obs.jk_avg( ibin, f );
+  //   const std::string filepath = obsdir+"eps_"+std::to_string(ibin)+".dat";
+  //   obs.write( jk_avg_corr, filepath, jk_avg_corr.size() );
+  // }
+
+
 
 
   return 0;

@@ -55,8 +55,11 @@ constexpr int nparallel = 1;
 
 #include "obs.h"
 
-constexpr int Nconf = 4e5; // 32>=
-constexpr int L = 8; // 4
+constexpr int Nconf = 1e3; // 32>=
+const int n_init = 1e1;
+// constexpr int Nconf = 4e5; // 32>=
+// const int n_init = 1e3;
+constexpr int L = 1; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -89,7 +92,7 @@ int main(int argc, char* argv[]){
   const std::string obsdir = "./obs_"+description+"/";
   std::filesystem::create_directories( obsdir );
 
-  const int n_init = 1e3;
+  // const int n_init = 1e3;
 
   // --------------------
 
