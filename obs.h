@@ -7,7 +7,8 @@
 template<typename T1, typename T2>
 class Jackknife {
 public:
-  std::vector<T2> config;
+  // std::vector<T2> config;
+  std::unique_ptr<T2[]> config;
 
   // std::vector<T1> bin_avg;
   std::vector<T1> jack_avg;
@@ -18,26 +19,30 @@ public:
   Idx nbins;
   Idx binsize;
 
-  Jackknife()
-  {
-    config.clear();
-  }
+  // Jackknife()
+  // {
+  //   config.clear();
+  // }
 
   Jackknife( const Idx N_ )
     : N(N_)
-    , config(N)
+      // , config(N)
   {
+    config = std::make_unique<T2[]>(N);
   }
 
-  Idx size() const { return config.size(); }
 
-  void meas( const T2& w ) { config.push_back(w); }
+  // Idx size() const { return config.size(); }
+  Idx size() const { return N; }
+
+  // void meas( const T2& w ) { config.push_back(w); }
   void meas( const Idx i, const T2& w ) { config[i] = w; }
 
   T1 jk_avg( const int i,
              const std::function<T1(const std::vector<T2>&)> f ) const {
-    std::vector<T2> vr = config;
-    vr.erase( vr.begin()+N, vr.end() );
+    // std::vector<T2> vr = config;
+    // vr.erase( vr.begin()+N, vr.end() );
+    std::vector<T2> vr (&config[0], &config[0]+N );
     vr.erase( vr.begin()+i*binsize, vr.begin()+(i+1)*binsize );
     assert( vr.size()==(nbins-1)*binsize );
     return f( vr );
@@ -45,7 +50,7 @@ public:
 
   void init( const int binsize_ ){
     this->binsize = binsize_;
-    this->nbins = config.size()/binsize;
+    this->nbins = N/binsize;
     this->N = binsize*nbins;
     jack_avg.clear();
     jack_avg.resize(nbins);

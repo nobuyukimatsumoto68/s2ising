@@ -274,6 +274,74 @@ public:
     return res;
   }
 
+  template<class T>
+  double T11( const Idx if1, const T& ising ) const {
+    std::vector<double> Ts(3);
+    std::vector<double> alpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    for(int mu=0; mu<3; mu++) {
+      Ts[mu] = T_hat(if1, mu, ising);
+      alpha[mu] = ising.spin.alphas[ising.dual.directedlinkidx(if1, mu)];
+      const double al_nu = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+1)%3)];
+      const double al_rho = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+2)%3)];
+      dalpha[mu] = M_PI+al_nu - al_rho;
+    }
+
+    double res = 0.0;
+    for(int mu=0; mu<3; mu++) {
+      const double factor = -std::sin(alpha[(mu+1)%3])*std::sin(alpha[(mu+2)%3])/std::sin(dalpha[(mu+1)%3])/std::sin(dalpha[(mu+2)%3]);
+      res += factor * Ts[mu];
+    }
+
+    return res;
+  }
+
+  template<class T>
+  double T22( const Idx if1, const T& ising ) const {
+    std::vector<double> Ts(3);
+    std::vector<double> alpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    for(int mu=0; mu<3; mu++) {
+      Ts[mu] = T_hat(if1, mu, ising);
+      alpha[mu] = ising.spin.alphas[ising.dual.directedlinkidx(if1, mu)];
+      const double al_nu = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+1)%3)];
+      const double al_rho = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+2)%3)];
+      dalpha[mu] = M_PI+al_nu - al_rho;
+    }
+
+    double res = 0.0;
+    for(int mu=0; mu<3; mu++) {
+      const double factor = -std::cos(alpha[(mu+1)%3])*std::cos(alpha[(mu+2)%3])/std::sin(dalpha[(mu+1)%3])/std::sin(dalpha[(mu+2)%3]);
+      res += factor * Ts[mu];
+    }
+
+    return res;
+  }
+
+  template<class T>
+  double T12( const Idx if1, const T& ising ) const {
+    std::vector<double> Ts(3);
+    std::vector<double> alpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    for(int mu=0; mu<3; mu++) {
+      Ts[mu] = T_hat(if1, mu, ising);
+      alpha[mu] = ising.spin.alphas[ising.dual.directedlinkidx(if1, mu)];
+      const double al_nu = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+1)%3)];
+      const double al_rho = ising.spin.alphas[ising.dual.directedlinkidx(if1, (mu+2)%3)];
+      dalpha[mu] = M_PI+al_nu - al_rho;
+    }
+
+    double res = 0.0;
+    for(int mu=0; mu<3; mu++) {
+      const double factor = 0.5*std::sin(alpha[1]+alpha[2])/std::sin(dalpha[(mu+1)%3])/std::sin(dalpha[(mu+2)%3]);
+      res += factor * Ts[mu];
+    }
+
+    return res;
+  }
+
+
+
 
 };
 
