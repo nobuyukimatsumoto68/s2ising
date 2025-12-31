@@ -134,14 +134,13 @@ int main(int argc, char* argv[]){
 
   std::cout << "# reading " << std::endl;
   {
-    T2 s;
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(nparallel)
 #endif
     for(int n=n_init; n<=n_max; n++){
+      T2 s;
       const std::string filepath = dir+std::to_string(n);
       s.read(filepath);
-      // obs.meas( s );
       obs.meas( n-n_init, s );
     }
   }
@@ -150,21 +149,24 @@ int main(int argc, char* argv[]){
   std::cout << "# ell_mean = " << dual.mean_ell << std::endl;
 
   const Idx i0 = 0;
-  const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
+  const T1 zero = T1::Zero( orbits.nbase() ); // T1::Zero( dual.NVertices() );
 
   auto mean12 = [&](const std::vector<T2>& vs) {
                   T1 eps_mean = zero;
                   for(Idx k=0; k<vs.size(); k++) {
-                    const T2 s = vs[k];
+                    const T2& s = vs[k];
                     for(Idx if1=0; if1<dual.NVertices(); if1++){
                       const auto& b0_g = orbits.b0_g_pairs[if1];
                       eps_mean[b0_g.first] += s.eps_hat(if1, ising);
                     }
                   }
-                  for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * n_max * orbits.npts[b0];
+                  for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * vs.size() * orbits.npts[b0];
 
                   return eps_mean;
                 };
+
+  // std::cout << "# debug. mean = " << mean12( std::vector<T2>(&obs.config[0],&obs.config[0]+obs.size()) ) << std::endl;
+  // return 1;
 
   auto mean11 = [&](const std::vector<T1>& vs) {
                   T1 mean = zero;
@@ -207,6 +209,18 @@ int main(int argc, char* argv[]){
     }
     os.close();
   }
+
+  {
+    const std::string filepath = obsdir+"orbit_size.dat";
+    std::ofstream os( filepath, std::ios::out | std::ios::trunc );
+    os << std::scientific << std::setprecision(25);
+    if(!os) assert(false);
+    os << "# ell_mean = " << dual.mean_ell << std::endl;
+    std::cout << "# orbit_size : " << std::endl;
+    os << orbits.print_orbitsize();
+    os.close();
+  }
+
 
 
   // int ibin_min;

@@ -34,7 +34,6 @@ using Complex = std::complex<double>;
 
 const int nparallel = 1;
 
-
 #include "sphere.h"
 #include "icosahedron.h"
 #include "lattices.h"
@@ -52,7 +51,7 @@ const int nparallel = 1;
 #include "loop.h"
 #include "ising.h"
 
-constexpr int L = 32; // 4
+constexpr int L = 80; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 

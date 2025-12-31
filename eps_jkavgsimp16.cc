@@ -32,7 +32,7 @@ using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
 
-constexpr int nparallel = 8;
+constexpr int nparallel = 1;
 
 
 #include "sphere.h"
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]){
   std::cout << "# ell_mean = " << dual.mean_ell << std::endl;
 
   const Idx i0 = 0;
-  const T1 zero = T1( orbits.nbase() ); // T1::Zero( dual.NVertices() );
+  const T1 zero = T1::Zero( orbits.nbase() ); // T1::Zero( dual.NVertices() );
 
   auto mean12 = [&](const std::vector<T2>& vs) {
                   T1 eps_mean = zero;
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]){
                       eps_mean[b0_g.first] += s.eps_hat(if1, ising);
                     }
                   }
-                  for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * n_max * orbits.npts[b0];
+                  for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * vs.size() * orbits.npts[b0];
 
                   return eps_mean;
                 };
@@ -206,6 +206,18 @@ int main(int argc, char* argv[]){
     }
     os.close();
   }
+
+  {
+    const std::string filepath = obsdir+"orbit_size.dat";
+    std::ofstream os( filepath, std::ios::out | std::ios::trunc );
+    os << std::scientific << std::setprecision(25);
+    if(!os) assert(false);
+    os << "# ell_mean = " << dual.mean_ell << std::endl;
+    std::cout << "# orbit_size : " << std::endl;
+    os << orbits.print_orbitsize();
+    os.close();
+  }
+
 
 
   // int ibin_min;

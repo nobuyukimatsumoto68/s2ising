@@ -32,7 +32,7 @@ using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
 
-constexpr int nparallel = 1;
+constexpr int nparallel = 8;
 
 
 #include "sphere.h"
@@ -56,8 +56,8 @@ constexpr int nparallel = 1;
 
 #include "obs.h"
 
-const int Nconf = 4e5;
-constexpr int L = 2; // 4
+const int Nconf = 1e5;
+constexpr int L = 128; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[]){
                     const T2& s = vs[k];
                     for(Idx if1=0; if1<dual.NVertices(); if1++){
                       const auto& b0_g = orbits.b0_g_pairs[if1];
-                      eps_mean[b0_g.first] += s.eps_hat(if1, ising);
+                      eps_mean[b0_g.first] += s.trT(if1, ising);
                     }
                   }
                   for(Idx b0=0; b0<orbits.nbase(); b0++) eps_mean[b0] /= 1.0 * vs.size() * orbits.npts[b0];
@@ -197,12 +197,12 @@ int main(int argc, char* argv[]){
   const T1 var = obs.var;
 
   {
-    const std::string filepath = obsdir+"eps_jk.dat";
+    const std::string filepath = obsdir+"trT_jk.dat";
     std::ofstream os( filepath, std::ios::out | std::ios::trunc );
     os << std::scientific << std::setprecision(25);
     if(!os) assert(false);
     os << "# ell_mean = " << dual.mean_ell << std::endl;
-    std::cout << "# eps : " << std::endl;
+    std::cout << "# trT : " << std::endl;
     for(Idx b0=0; b0<orbits.nbase(); b0++) {
       std::cout << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;
       os << mean[b0] << " " << std::sqrt(var[b0]) << std::endl;

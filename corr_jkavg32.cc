@@ -31,7 +31,7 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
-
+constexpr int nparallel = 8;
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -121,19 +121,19 @@ int main(int argc, char* argv[]){
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-  Jackknife<T1,T2> obs;
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
+  // Jackknife<T1,T2> obs;
+  Jackknife<T1,T2> obs(n_max-n_init+1);
 
   {
     T2 s;
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(nparallel)
-// #endif
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
     for(int n=n_init; n<=n_max; n++){
       const std::string filepath = dir+std::to_string(n);
       s.read(filepath);
-      obs.meas( s );
-      // obs.meas( n, s );
+      // obs.meas( s );
+      obs.meas( n-n_init, s );
     }
   }
 
@@ -193,6 +193,9 @@ int main(int argc, char* argv[]){
 
   std::cout << "# starting from ibin = " << ibin_min << std::endl;
 
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
   for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
     std::cout << "# debug. ibin = " << ibin << std::endl;
     const T1 jk_avg_corr = obs.jk_avg( ibin, f );

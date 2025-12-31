@@ -57,7 +57,7 @@ constexpr int nparallel = 1;
 #include "obs.h"
 
 const int Nconf = 4e5;
-constexpr int L = 2; // 4
+constexpr int L = 24; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -165,9 +165,6 @@ int main(int argc, char* argv[]){
                   return eps_mean;
                 };
 
-  // std::cout << "# debug. mean = " << mean12( std::vector<T2>(&obs.config[0],&obs.config[0]+obs.size()) ) << std::endl;
-  // return 1;
-
   auto mean11 = [&](const std::vector<T1>& vs) {
                   T1 mean = zero;
                   for(Idx k=0; k<vs.size(); k++) mean += vs[k];
@@ -220,6 +217,7 @@ int main(int argc, char* argv[]){
     os << orbits.print_orbitsize();
     os.close();
   }
+
 
 
   // int ibin_min;

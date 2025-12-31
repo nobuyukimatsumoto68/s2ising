@@ -57,7 +57,7 @@ constexpr int nparallel = 1;
 #include "obs.h"
 
 const int Nconf = 4e5;
-constexpr int L = 2; // 4
+constexpr int L = 4; // 4
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -210,7 +210,7 @@ int main(int argc, char* argv[]){
     os.close();
   }
 
-  {
+    {
     const std::string filepath = obsdir+"orbit_size.dat";
     std::ofstream os( filepath, std::ios::out | std::ios::trunc );
     os << std::scientific << std::setprecision(25);
@@ -220,6 +220,7 @@ int main(int argc, char* argv[]){
     os << orbits.print_orbitsize();
     os.close();
   }
+
 
 
   // int ibin_min;

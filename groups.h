@@ -400,6 +400,7 @@ struct Orbits {
   }
 
 
+
   void RefreshOrbits(){ // for opt
     for(const Idx in : basePoints){
       const V3 r = vertices[in];
@@ -427,4 +428,11 @@ struct Orbits {
     }
     return ss.str();
   }
+
+  std::string print_orbitsize() const {
+    std::stringstream ss;
+    for(Idx b0=0; b0<nbase(); b0++) ss << npts[b0] << std::endl;
+    return ss.str();
+  }
+
 };

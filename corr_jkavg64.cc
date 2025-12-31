@@ -31,7 +31,7 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
-
+constexpr int nparallel = 8;
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -121,19 +121,19 @@ int main(int argc, char* argv[]){
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-  Jackknife<T1,T2> obs;
-  // Jackknife<T1,T2> obs(n_max-n_init+1);
+  // Jackknife<T1,T2> obs;
+  Jackknife<T1,T2> obs(n_max-n_init+1);
 
   {
     T2 s;
-// #ifdef _OPENMP
-// #pragma omp parallel for num_threads(nparallel)
-// #endif
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
     for(int n=n_init; n<=n_max; n++){
       const std::string filepath = dir+std::to_string(n);
       s.read(filepath);
-      obs.meas( s );
-      // obs.meas( n, s );
+      // obs.meas( s );
+      obs.meas( n-n_init, s );
     }
   }
 
@@ -147,7 +147,7 @@ int main(int argc, char* argv[]){
     std::vector<double> Nsq_mean(orbits.nbase(), 0.0);
 
     for(Idx k=0; k<vs.size(); k++) {
-      T2 s = vs[k];
+      const T2& s = vs[k];
 
       for(Idx if1=0; if1<dual.NVertices(); if1++){
         const auto& b0_g = orbits.b0_g_pairs[if1];
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]){
       }
 
       for(Idx g=0; g<NIh; g++){
-        T2 ss = s;
+        T2 ss = s; // copy
         if( !ss[orbits[i0][g]] ) ss.flip();
 
         T1 tmp = zero;
@@ -193,6 +193,9 @@ int main(int argc, char* argv[]){
 
   std::cout << "# starting from ibin = " << ibin_min << std::endl;
 
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(nparallel)
+#endif
   for(int ibin=ibin_min; ibin<obs.nbins; ibin++){
     std::cout << "# debug. ibin = " << ibin << std::endl;
     const T1 jk_avg_corr = obs.jk_avg( ibin, f );

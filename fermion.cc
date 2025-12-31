@@ -44,7 +44,7 @@ constexpr int nparallel = 1;
 // #include <omp.h>
 #include "loop.h"
 
-constexpr int L = 4;
+constexpr int L = 2;
 constexpr Idx N = 10*L*L+2;
 
 
@@ -83,7 +83,9 @@ int main(int argc, char* argv[]){
   // std::cout << Dmat.real() << std::endl;
   // std::cout << Dmat.imag() << std::endl;
   std::cout << Dmat.determinant() << std::endl;
+  std::cout << Dmat.eigenvalues() << std::endl;
   auto inverse=Dmat.inverse();
+  std::cout << inverse << std::endl;
 
   // std::cout << inverse(0,0) << std::endl;
   // std::cout << inverse(0,1) << std::endl;
