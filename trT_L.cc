@@ -66,12 +66,14 @@ int main(int argc, char* argv[]){
                     dual.basePoints,
                     dual.baseTypes,
                     lattice, Ih, rot);
+      const int norbits = orbits.nbase();
 
-      const Idx b0 = orbits.b0_g_pairs.back().first;
+      // const Idx b0 = orbits.b0_g_pairs.back().first;
+      // const Idx b0 = orbits.b0_g_pairs[norbits-1].first;
       Idx if1;
       for(if1=0; if1<dual.NVertices(); if1++){
         const auto& b0_g = orbits.b0_g_pairs[if1];
-        if(b0_g.first==b0) break;
+        if(b0_g.first==norbits-1) break;
       }
       std::cout << L << " " << dual.mean_ell << " " << std::pow(dual.mean_ell, 2) * M_PI/(2.0*dual.site_volumes[if1]) << std::endl;
     }

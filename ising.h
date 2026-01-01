@@ -266,7 +266,7 @@ public:
       res += factor * Ts[mu];
     }
     // res /= ising.dual.site_volumes[if1];
-    res *= M_PI / ising.dual.site_volumes[if1];
+    res *= std::pow(ising.dual.mean_ell, 2) * M_PI / ising.dual.site_volumes[if1];
 
     return res;
   }
