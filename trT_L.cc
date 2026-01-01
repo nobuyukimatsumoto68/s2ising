@@ -73,7 +73,7 @@ int main(int argc, char* argv[]){
         const auto& b0_g = orbits.b0_g_pairs[if1];
         if(b0_g.first==b0) break;
       }
-      std::cout << L << " " << dual.mean_ell << " " << std::pow(dual.mean_ell, 2) * M_PI/(2.0*dual.site_volumes[if1]) << std::endl;
+      std::cout << L << " " << dual.mean_ell << " " << std::pow(dual.mean_ell, 2) * 2.0*M_PI/(dual.site_volumes[if1]) << std::endl;
     }
   }
 
