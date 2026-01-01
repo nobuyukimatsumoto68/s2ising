@@ -546,10 +546,13 @@ struct RefinedIcosahedronDual {
 
   double mean_ell;
   double mean_link_volume;
-  double mean_dual_area;
+  // double mean_dual_area;
 
-  std::vector<double> vols; // hex vol
+  std::vector<double> vols; // hex vol [in]
   double mean_vol;
+
+  std::vector<double> site_volumes; // tri vol [if]
+  double mean_site_volume;
 
   std::map<const DirectedLink, const DirectedLink> linkSimp2Dual;
   std::map<Link, int> getDirection;
@@ -567,6 +570,7 @@ struct RefinedIcosahedronDual {
     FillDualLinks();
     set_ell_link_volume();
     set_vol();
+    set_site_volume();
   }
 
   Idx NVertices() const { return simplicial.NFaces(); }
@@ -1207,6 +1211,44 @@ struct RefinedIcosahedronDual {
     assert( std::abs(mean_vol-4.0*M_PI)/std::sqrt(link_volumes.size())<1.0e-12 );
     mean_vol /= vols.size();
   }
+
+
+  void set_site_volume(){
+    site_volumes.resize( NVertices() );
+
+    for(Idx if1=0; if1<NVertices(); if1++){
+      const FaceCoords f1 = idx2FaceCoords( if1 );
+
+      double v = 0.0;
+      for(int df=0; df<3; df++){
+        const Idx ell =directedlinkidx(if1,df);
+        FaceCoords f2; shift(f2, f1, df);
+        const Idx if2 = idx(f2);
+
+        Coords pA, pB;
+        dual_simp_link(pA, pB, f1, df);
+        const Idx iA = simplicial.idx(pA);
+        const Idx iB = simplicial.idx(pB);
+
+        const V3 x1 = vertices[if1];
+        const V3 xA = simplicial.vertices[iA];
+        const V3 xB = simplicial.vertices[iB];
+
+        const double areaA = sphericalarea(x1,xA,xB);
+        v += areaA;
+      }
+      site_volumes[if1] = v;
+    }
+
+    mean_site_volume = 0.0;
+    for(const double elem : site_volumes) {
+      mean_site_volume+=elem;
+    }
+    // std::cout << "debug. "
+    assert( std::abs(mean_site_volume-4.0*M_PI)/std::sqrt(site_volumes.size())<1.0e-12 );
+    mean_site_volume /= site_volumes.size();
+  }
+
 
 
 

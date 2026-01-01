@@ -187,14 +187,32 @@ int main(int argc, char* argv[]){
 
     double prod = 0.0;
     double sum = 0.0;
+    double sum11 = 0.0;
+    double sum22 = 0.0;
+    double sum12 = 0.0;
+    double sumT = 0.0;
     double sum2 = 0.0;
-    // double sum3 = 0.0;
+    double sum3 = 0.0;
     for(Idx q1=0; q1<std::pow(2,N2); q1++){
       s.set( q1 );
       prod += s.weight();
       sum += std::exp(s.S());
+
       double K = s.s.K_hat(if1, rho, ising);
+      double eps_hat = s.s.eps_hat(if1, ising);
+      // double eps_hat2 = s.s.eps_hat(if2, ising);
+      // std::cout << "K, eps " << K << " " << eps_hat << " " << eps_hat2 << std::endl;
       sum2 += K*std::exp(s.S());
+      sum3 += eps_hat*std::exp(s.S());
+
+      double T11 = s.s.T11(if1, ising);
+      double T22 = s.s.T22(if1, ising);
+      double T12 = s.s.T12(if1, ising);
+      double trT = s.s.trT(if1, ising);
+      sum11 += T11*std::exp(s.S());
+      sum22 += T22*std::exp(s.S());
+      sum12 += T12*std::exp(s.S());
+      sumT += trT*std::exp(s.S());
       // sum3 += s.s(0)*s.s(1) * std::exp(s.S());
       // std::cout << ising.eval_loop( q ) << std::endl;
       // break;
@@ -216,14 +234,86 @@ int main(int argc, char* argv[]){
     }
     factor *= std::pow(2,N2);
 
+    std::cout << "<T11> = " << sum11/sum << std::endl;
+    std::cout << "<T22> = " << sum22/sum << std::endl;
+    std::cout << "<T12> = " << sum12/sum << std::endl;
+    std::cout << "<trT> = " << sumT/sum << std::endl;
     std::cout << "<K> = " << sum2/sum << std::endl;
+    std::cout << "<eps> = " << sum3/sum << std::endl;
   }
 
 
 
+  std::cout << "Ising. numerical deriv" << std::endl;
+  double isump=0.0, isumm=0.0;
+  { // this will only modify q loop
+    D.kappas[ell] += eta;
+    D.kappas[em] += eta;
+
+    DualLoop<N> loop(D);
+    Ising ising(loop);
+    Spin<N, N2> s(ising);
+
+    for(Idx q1=0; q1<std::pow(2,N2); q1++){
+      s.set( q1 );
+      isump += std::exp(s.S());
+    }
+
+    double factor = 1.0;
+    for(Idx il=0; il<2*dual.NLinks(); il++){
+      const DirectedLink ell = dual.directedlinkidx2DirectedLink( il );
+      const Idx if1 = ell.first;
+      FaceCoords f = dual.idx2FaceCoords( ell.first );
+
+      FaceCoords f2;
+      dual.shift( f2, dual.idx2FaceCoords(ell.first), ell.second );
+      const Idx if2 = dual.idx(f2);
+      if(if1>=if2) continue;
+
+      const double beta = ising.betas.at( ell );
+      factor *= std::cosh(beta);
+    }
+    factor *= std::pow(2,N2);
+    isump /= factor;
+  }
+  { // this will only modify q loop
+    D.kappas[ell] -= 2.0*eta;
+    D.kappas[em] -= 2.0*eta;
+
+    DualLoop<N> loop(D);
+    Ising ising(loop);
+    Spin<N, N2> s(ising);
+
+    for(Idx q1=0; q1<std::pow(2,N2); q1++){
+      s.set( q1 );
+      isumm += std::exp(s.S());
+    }
+
+    double factor = 1.0;
+    for(Idx il=0; il<2*dual.NLinks(); il++){
+      const DirectedLink ell = dual.directedlinkidx2DirectedLink( il );
+      const Idx if1 = ell.first;
+      FaceCoords f = dual.idx2FaceCoords( ell.first );
+
+      FaceCoords f2;
+      dual.shift( f2, dual.idx2FaceCoords(ell.first), ell.second );
+      const Idx if2 = dual.idx(f2);
+      if(if1>=if2) continue;
+
+      const double beta = ising.betas.at( ell );
+      factor *= std::cosh(beta);
+    }
+    factor *= std::pow(2,N2);
+    isumm /= factor;
+  }
+  D.kappas[ell] += eta;
+  D.kappas[em] += eta;
+  std::cout << "deriv = " << (std::log(isump)-std::log(isumm))/(2.0*eta) << std::endl;
 
 
-    std::cout << "Pf. numerical deriv" << std::endl;
+
+
+  std::cout << "Pf. numerical deriv" << std::endl;
   {
     auto matD = D.matrix();
     double prod_mu = 1.0;

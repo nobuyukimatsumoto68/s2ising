@@ -265,7 +265,8 @@ public:
       const double factor = ising.D.kappas[ising.dual.directedlinkidx(if1,mu)];
       res += factor * Ts[mu];
     }
-    res /= ising.D.mus[if1];
+    // res /= ising.dual.site_volumes[if1];
+    res *= M_PI / ising.dual.site_volumes[if1];
 
     return res;
   }
