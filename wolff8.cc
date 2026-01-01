@@ -33,6 +33,11 @@ using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
 
+#ifndef nparallel
+#define nparallel 1
+#endif
+
+
 
 #include "sphere.h"
 #include "icosahedron.h"
@@ -66,7 +71,7 @@ int main(int argc, char* argv[]){
   std::cout << std::scientific << std::setprecision(25);
   std::clog << std::scientific << std::setprecision(25);
 
-  const int nparallel = 1;
+  // const int nparallel = 1;
   omp_set_num_threads(nparallel);
 
   int seed=0;
@@ -79,7 +84,7 @@ int main(int argc, char* argv[]){
   std::filesystem::create_directories( dir );
 
   const int Nrepeat = 100;
-  const int Nconf = 4e5;
+  const int Nconf = 2e6;
 
   // --------------------
 

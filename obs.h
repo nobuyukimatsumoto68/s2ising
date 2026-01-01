@@ -151,9 +151,10 @@ public:
 
   JackknifeSimp( const Idx N_ )
     : N(N_)
-      // , config(N)
+    // , config(new T2[N])
   {
     config = std::make_unique<T2[]>(N);
+    // config 
   }
 
 

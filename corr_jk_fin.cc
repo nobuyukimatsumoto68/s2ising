@@ -31,6 +31,25 @@ using M3 = Eigen::Matrix3d;
 using M2 = Eigen::Matrix2cd;
 using Complex = std::complex<double>;
 
+#ifndef nparallel
+#define nparallel 1
+#endif
+
+#ifndef LL
+#define LL 2
+#endif
+
+#ifndef Nconf
+#define Nconf 1e5
+#endif
+
+#ifndef CORR
+#define CORR ss
+#endif
+
+
+#define STR_IMPL(x) #x
+#define STR(x) STR_IMPL(x)
 
 
 #include "sphere.h"
@@ -51,12 +70,13 @@ using Complex = std::complex<double>;
 #include "ising.h"
 
 
-constexpr int nparallel = 1;
+// constexpr int nparallel = 1;
 
 #include "obs.h"
 
-constexpr int Nconf = 4e5;
-constexpr int L = 16; // 4
+// constexpr int Nconf = 4e5;
+// constexpr int L = 16; // 4
+constexpr int L = LL; // 4$
 constexpr Idx N = 10*L*L+2;
 constexpr Idx N2 = 20*L*L;
 
@@ -72,6 +92,7 @@ int main(int argc, char* argv[]){
   std::clog << std::scientific << std::setprecision(25);
 
   // omp_set_num_threads(nparallel);
+static const char * Corr = STR(CORR);
 
   int seed=0;
   if(argc>=2) seed = atoi(argv[1]);
@@ -121,7 +142,7 @@ int main(int argc, char* argv[]){
 
   using T1=Eigen::VectorXd;
   using T2=SpinField<N2>;
-  Jackknife<T1,T2> obs;
+  Jackknife<T1,T2> obs(n_max-n_init+1);
 
 //   {
 //     T2 s;
@@ -149,7 +170,8 @@ int main(int argc, char* argv[]){
   int ibin_max;
   for(ibin_max=0; ibin_max<obs.nbins; ibin_max++){
     // check ckpoints
-    const std::string filepath = obsdir+"corr_"+std::to_string(ibin_max)+".dat";
+    const std::string filepath = obsdir+Corr+"_"+std::to_string(ibin_max)+".dat";
+    std::cout << "# debug. filepath = " << filepath << std::endl;
     const bool bool_corr = std::filesystem::exists(filepath);
     if(!(bool_corr)) break;
   }
@@ -163,7 +185,7 @@ int main(int argc, char* argv[]){
     // std::cout << "# debug. jk_corr" << std::endl;
     // for(double elem : jk_avg_corr) std::cout << elem << std::endl;
     T1 jk_avg_corr = zero;
-    const std::string filepath = obsdir+"corr_"+std::to_string(ibin)+".dat";
+    const std::string filepath = obsdir+Corr+"_"+std::to_string(ibin)+".dat";
     obs.read( jk_avg_corr, filepath, jk_avg_corr.size() );
     obs.jack_avg[ibin] = jk_avg_corr;
     // write ckpoints
@@ -174,6 +196,8 @@ int main(int argc, char* argv[]){
   // // in sep file
   // read ckpoints
 
+  Sphere s2;
+
   const T1 mean = obs.mean;
   const T1 var = obs.var;
 
@@ -181,8 +205,13 @@ int main(int argc, char* argv[]){
   const V3 r0 = dual.vertices[i0];
   const Idx b0 = orbits.b0_g_pairs[i0].first;
 
+  double theta0 = s2.theta( r0 );
+  double phi0 = s2.phi( r0 );
+  std::cout << "# theta0 = " << theta0 << std::endl;
+  std::cout << "# phi0 = " << phi0 << std::endl;
+
   {
-    const std::string filepath = obsdir+"corr_jk.dat";
+    const std::string filepath = obsdir+Corr+"_jk.dat";
     std::ofstream os( filepath, std::ios::out | std::ios::trunc );
     os << std::scientific << std::setprecision(25);
     if(!os) assert(false);
@@ -190,15 +219,17 @@ int main(int argc, char* argv[]){
     for(Idx i=0; i<dual.NVertices(); i++) {
       const Idx b1 = orbits.b0_g_pairs[i].first;
       const V3 r1 = dual.vertices[i];
-      double ell = arcLength( r0, r1 );
-      if(isnan(ell)){
-        std::cout << "# debug. ell = " << ell << std::endl;
-        std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
-        std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
-        ell = M_PI;
-      }
-      std::cout << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
-      os << ell << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+      // double ell = arcLength( r0, r1 );
+      double theta = s2.theta( r1 );
+      double phi = s2.phi( r1 );
+      // if(isnan(ell)){
+      //   std::cout << "# debug. ell = " << ell << std::endl;
+      //   std::cout << "# debug. r0 = " << r0.transpose() << std::endl;
+      //   std::cout << "# debug. r1 = " << r1.transpose() << std::endl;
+      //   // ell = M_PI;
+      // }
+      std::cout << theta-theta0 << " " << phi-phi0 << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
+      os << theta-theta0 << " " << phi-phi0 << " " << mean[i] << " " << std::sqrt(var[i]) << std::endl;
     }
     os.close();
   }

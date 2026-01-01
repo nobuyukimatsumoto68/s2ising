@@ -242,20 +242,36 @@ public:
     return coeff*( -tanh + ss );
   }
 
-  template<class T>
-  double T_hat( const Idx if1, const int mu, const T& ising ) const {
-    const auto& dual = ising.dual;
-    const FaceCoords f1 = dual.idx2FaceCoords(if1);
-    FaceCoords f2; dual.shift(f2, f1, mu);
-    const Idx if2 = dual.idx(f2);
+  // template<class T>
+  // double T_hat( const Idx if1, const int mu, const T& ising ) const {
+  //   const auto& dual = ising.dual;
+  //   const FaceCoords f1 = dual.idx2FaceCoords(if1);
+  //   FaceCoords f2; dual.shift(f2, f1, mu);
+  //   const Idx if2 = dual.idx(f2);
 
-    double res = K_hat(if1, mu, ising) - 0.5*(eps_hat(if1,ising)+eps_hat(if2,ising));
-    res *= dual.mean_ell / dual.ells[dual.directedlinkidx(if1, mu)];
+  //   double res = K_hat(if1, mu, ising) - 0.5*(eps_hat(if1,ising)+eps_hat(if2,ising));
+  //   res *= dual.mean_ell / dual.ells[dual.directedlinkidx(if1, mu)];
+  //   return res;
+  // }
+
+  template<class T>
+  double trT( const Idx if1, const T& ising ) const {
+    std::vector<double> Ts(3);
+    // std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
+    for(int mu=0; mu<3; mu++) Ts[mu] = K_hat(if1, mu, ising) - eps_hat(if1,ising);
+
+    double res = 0.0;
+    for(int mu=0; mu<3; mu++) {
+      const double factor = ising.D.kappas[ising.dual.directedlinkidx(if1,mu)];
+      res += factor * Ts[mu];
+    }
+    res /= ising.D.mus[if1];
+
     return res;
   }
 
   template<class T>
-  double trT( const Idx if1, const T& ising ) const {
+  double trTo( const Idx if1, const T& ising ) const {
     std::vector<double> Ts(3);
     std::vector<double> dalpha(3); // [mu]; y+nu,y,y+rho; (mu,nu,rho)
     for(int mu=0; mu<3; mu++) {
